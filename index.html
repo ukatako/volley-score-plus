@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Volley Score</title>
+<title>Volley Score Plus</title>
 
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
@@ -20,32 +20,6 @@ body {
 
 .app {
   max-width: 430px;
-  @media (min-width: 700px) {
-  .app {
-    max-width: 820px;
-  }
-
-  .score-area {
-    max-width: 520px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .main-buttons,
-  .sub-buttons {
-    max-width: 520px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .history,
-  .stats-card,
-  .collapse {
-    max-width: 720px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-}
   margin: 0 auto;
   min-height: 100vh;
   background: #f7f7f7;
@@ -159,9 +133,7 @@ body {
   gap: 6px;
 }
 
-.set-list {
-  margin-top: 8px;
-}
+.set-list { margin-top: 8px; }
 
 .set-summary {
   margin-top: 8px;
@@ -194,9 +166,7 @@ body {
   font-size: 24px;
 }
 
-.edit-mode .delete-btn {
-  display: block;
-}
+.edit-mode .delete-btn { display: block; }
 
 .new-btn {
   position: sticky;
@@ -212,9 +182,7 @@ body {
   margin-top: 18px;
 }
 
-.set-row {
-  margin: 16px 0 10px;
-}
+.set-row { margin: 16px 0 10px; }
 
 .set-title {
   text-align: center;
@@ -256,9 +224,7 @@ body {
   display: none;
 }
 
-.collapse.open .collapse-body {
-  display: block;
-}
+.collapse.open .collapse-body { display: block; }
 
 .setting-grid {
   display: grid;
@@ -394,14 +360,12 @@ input, select {
   display: grid;
   grid-template-columns: 68px 1fr 92px;
   align-items: center;
-  min-height: 46px;
-  padding: 0 12px;
+  min-height: 54px;
+  padding: 6px 12px;
   border-bottom: 1px solid #e5e5e5;
 }
 
-.history-row:last-child {
-  border-bottom: none;
-}
+.history-row:last-child { border-bottom: none; }
 
 .badge {
   color: white;
@@ -413,12 +377,16 @@ input, select {
 }
 
 .score-history {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 14px;
-  font-size: 22px;
+  text-align: center;
+  font-size: 21px;
   font-weight: 900;
+}
+
+.reason-text {
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #555;
 }
 
 .history-rotation {
@@ -471,9 +439,7 @@ input, select {
   margin-bottom: 16px;
 }
 
-.stats-tabs {
-  margin: 12px 0;
-}
+.stats-tabs { margin: 12px 0; }
 
 .stats-tab {
   border: none;
@@ -505,9 +471,7 @@ input, select {
   border-right: 1px solid #ddd;
 }
 
-.stats-box:last-child {
-  border-right: none;
-}
+.stats-box:last-child { border-right: none; }
 
 .stats-label {
   font-size: 13px;
@@ -547,9 +511,7 @@ input, select {
   font-weight: 800;
 }
 
-.stats-table .best {
-  background: #eef5ff;
-}
+.stats-table .best { background: #eef5ff; }
 
 .percent-main {
   font-size: 20px;
@@ -591,13 +553,43 @@ input, select {
 .modal-title {
   font-size: 22px;
   font-weight: 900;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .modal-text {
   color: #555;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   font-weight: 700;
+}
+
+.reason-section {
+  text-align: left;
+  margin: 14px 0;
+}
+
+.reason-section-title {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.reason-option {
+  width: 100%;
+  border: 1px solid #c8d8ff;
+  background: #f4f8ff;
+  color: #1557e6;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 8px;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: left;
+}
+
+.reason-option.away {
+  border-color: #ffc9c9;
+  background: #fff4f4;
+  color: #e91f26;
 }
 
 .danger-btn, .cancel-btn, .primary-btn {
@@ -620,7 +612,7 @@ input, select {
 <div class="app">
 
   <div id="listScreen" class="screen active">
-    <div class="header">Volley Score</div>
+    <div class="header">Volley Score Plus</div>
 
     <div class="header-sub">
       <h2>試合一覧</h2>
@@ -635,7 +627,7 @@ input, select {
     <div class="header" style="margin:0 -18px;">
       <div class="header-row">
         <button class="back-btn" onclick="requestGoList()">← 一覧に戻る</button>
-        <div class="header-title">Score Input</div>
+        <div class="header-title">Score Plus</div>
         <button class="header-btn" onclick="saveMatch()">💾 保存</button>
       </div>
     </div>
@@ -741,8 +733,8 @@ input, select {
 
     <div class="fixed-actions">
       <div class="main-buttons">
-        <button class="point-btn home-bg" onclick="addPoint('home')">HOME +1</button>
-        <button class="point-btn away-bg" onclick="addPoint('away')">AWAY +1</button>
+        <button class="point-btn home-bg" onclick="openReasonModal('home')">HOME +1</button>
+        <button class="point-btn away-bg" onclick="openReasonModal('away')">AWAY +1</button>
       </div>
 
       <div class="sub-buttons">
@@ -807,6 +799,25 @@ input, select {
 
 </div>
 
+<div class="modal-bg" id="reasonModal">
+  <div class="modal">
+    <div class="modal-title" id="reasonModalTitle">得点理由を選択</div>
+    <div class="modal-text" id="reasonModalText">理由を選ぶと得点が入ります</div>
+
+    <div class="reason-section">
+      <div class="reason-section-title" id="scoringReasonTitle">得点理由</div>
+      <div id="scoringReasonButtons"></div>
+    </div>
+
+    <div class="reason-section">
+      <div class="reason-section-title" id="mistakeReasonTitle">失点理由</div>
+      <div id="mistakeReasonButtons"></div>
+    </div>
+
+    <button class="cancel-btn" onclick="closeReasonModal()">キャンセル</button>
+  </div>
+</div>
+
 <div class="modal-bg" id="deleteModal">
   <div class="modal">
     <div class="modal-title">この試合を削除しますか？</div>
@@ -827,7 +838,7 @@ input, select {
 </div>
 
 <script>
-let matches = JSON.parse(localStorage.getItem("volleyMatches")) || [];
+let matches = JSON.parse(localStorage.getItem("volleyMatchesPlus")) || [];
 let editMode = false;
 let deleteTargetId = null;
 let currentMatchId = null;
@@ -843,6 +854,7 @@ let homeRotation = 1;
 let awayRotation = "-";
 let servingTeam = null;
 let history = [];
+let pendingScoreTeam = null;
 
 const rotationMap = {
   1: "S1",
@@ -855,6 +867,9 @@ const rotationMap = {
 };
 
 const rotationOrder = [1, 2, 3, 4, 5, 6];
+
+const scoringReasons = ["アタック決定", "サービスエース", "ブロック得点"];
+const mistakeReasons = ["アタック失点", "サーブミス", "その他のミス"];
 
 function markDirty() {
   isDirty = true;
@@ -892,6 +907,58 @@ function toggleStats() {
 function setStatsView(view) {
   statsView = view;
   renderStats();
+}
+
+function openReasonModal(team) {
+  if (!servingTeam) {
+    alert("先に試合開始を押してください");
+    return;
+  }
+
+  pendingScoreTeam = team;
+
+  const scoringTeamName = team === "home" ? "HOME" : "AWAY";
+  const opponentTeamName = team === "home" ? "AWAY" : "HOME";
+
+  document.getElementById("reasonModalTitle").textContent = `${scoringTeamName} +1 の理由を選択`;
+  document.getElementById("reasonModalText").textContent = `${scoringTeamName}に1点が入ります`;
+  document.getElementById("scoringReasonTitle").textContent = `${scoringTeamName}の得点理由`;
+  document.getElementById("mistakeReasonTitle").textContent = `${opponentTeamName}の失点理由`;
+
+  const scoringButtons = document.getElementById("scoringReasonButtons");
+  const mistakeButtons = document.getElementById("mistakeReasonButtons");
+
+  scoringButtons.innerHTML = "";
+  mistakeButtons.innerHTML = "";
+
+  scoringReasons.forEach(reason => {
+    const btn = document.createElement("button");
+    btn.className = team === "home" ? "reason-option" : "reason-option away";
+    btn.textContent = reason;
+    btn.onclick = () => selectReason(reason);
+    scoringButtons.appendChild(btn);
+  });
+
+  mistakeReasons.forEach(reason => {
+    const btn = document.createElement("button");
+    btn.className = team === "home" ? "reason-option away" : "reason-option";
+    btn.textContent = reason;
+    btn.onclick = () => selectReason(reason);
+    mistakeButtons.appendChild(btn);
+  });
+
+  document.getElementById("reasonModal").style.display = "flex";
+}
+
+function closeReasonModal() {
+  pendingScoreTeam = null;
+  document.getElementById("reasonModal").style.display = "none";
+}
+
+function selectReason(reason) {
+  if (!pendingScoreTeam) return;
+  addPoint(pendingScoreTeam, reason);
+  closeReasonModal();
 }
 
 function newMatch() {
@@ -965,7 +1032,7 @@ function startMatch() {
   updateDisplay();
 }
 
-function addPoint(team) {
+function addPoint(team, reason = "未選択") {
   if (!servingTeam) {
     alert("先に試合開始を押してください");
     return;
@@ -992,6 +1059,7 @@ function addPoint(team) {
   history.push({
     setNumber,
     scoredTeam: team,
+    reason,
     homeScore,
     awayScore,
     homeRotation,
@@ -1062,14 +1130,14 @@ function undo() {
 
   if (currentSetHistory.length === 0) return;
 
-let lastIndex = -1;
+  let lastIndex = -1;
 
-for (let i = history.length - 1; i >= 0; i--) {
-  if (history[i].setNumber === setNumber) {
-    lastIndex = i;
-    break;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].setNumber === setNumber) {
+      lastIndex = i;
+      break;
+    }
   }
-}
 
   if (lastIndex >= 0) history.splice(lastIndex, 1);
 
@@ -1087,7 +1155,7 @@ for (let i = history.length - 1; i >= 0; i--) {
 
   history = [...otherHistory];
 
-  oldHistory.forEach(item => addPoint(item.scoredTeam));
+  oldHistory.forEach(item => addPoint(item.scoredTeam, item.reason));
 
   markDirty();
   updateDisplay();
@@ -1241,6 +1309,7 @@ function renderHistory() {
           <span class="home-text">${item.homeScore}</span>
           <span>-</span>
           <span class="away-text">${item.awayScore}</span>
+          <div class="reason-text">${item.reason || ""}</div>
         </div>
         <div class="history-rotation">
           <span class="home-text">${homeRot}</span>/<span class="away-text">${awayRot}</span>
@@ -1285,14 +1354,8 @@ function renderStatsTabs() {
 }
 
 function getStatsItems() {
-  if (statsView === "total") {
-    return history;
-  }
-
-  if (statsView === "current") {
-    return history.filter(item => item.setNumber === setNumber);
-  }
-
+  if (statsView === "total") return history;
+  if (statsView === "current") return history.filter(item => item.setNumber === setNumber);
   return history.filter(item => item.setNumber === statsView);
 }
 
@@ -1513,7 +1576,7 @@ function saveMatch(goBack = false) {
 
   currentMatchId = matchData.id;
   setResults = savedSetResults;
-  localStorage.setItem("volleyMatches", JSON.stringify(matches));
+  localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
   isDirty = false;
 
   if (goBack) goList();
@@ -1618,7 +1681,7 @@ function closeDeleteModal() {
 
 function confirmDelete() {
   matches = matches.filter(m => m.id !== deleteTargetId);
-  localStorage.setItem("volleyMatches", JSON.stringify(matches));
+  localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
   closeDeleteModal();
   renderMatchList();
 }

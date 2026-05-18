@@ -348,10 +348,41 @@ input, select {
   margin-bottom: 8px;
 }
 
+.history-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.history-tab {
+  border: none;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  background: #eee;
+  color: #333;
+}
+
+.history-tab.active {
+  background: #1557e6;
+  color: white;
+}
+
+.history-view-note {
+  font-size: 12px;
+  color: #666;
+  font-weight: 800;
+  margin: -2px 0 8px;
+}
+
 .history {
   border: 1px solid #ddd;
   border-radius: 10px;
-  overflow: hidden;
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   margin-bottom: 16px;
   background: white;
 }
@@ -388,6 +419,10 @@ input, select {
   font-weight: 800;
   color: #555;
 }
+
+.reason-text.home-text { color: #1557e6; }
+.reason-text.away-text { color: #e91f26; }
+.reason-text.gray-text { color: #666; }
 
 .history-rotation {
   text-align: right;
@@ -860,6 +895,9 @@ input, select {
       <div style="text-align:right;">HOME/AWAY</div>
     </div>
 
+    <div class="history-tabs" id="historyTabs"></div>
+    <div class="history-view-note" id="historyViewNote"></div>
+
     <div class="history" id="history"></div>
 
     <div class="fixed-actions">
@@ -992,6 +1030,7 @@ let setNumber = 1;
 let setResults = [];
 let statsView = "current";
 let statsMode = "point";
+let historyView = "current";
 
 let homeScore = 0;
 let awayScore = 0;
@@ -1082,6 +1121,7 @@ function openReasonModal(team) {
 
   const scoringTeamName = team === "home" ? "HOME" : "AWAY";
   const opponentTeamName = team === "home" ? "AWAY" : "HOME";
+  const isScoringTeamServing = team === servingTeam;
 
   document.getElementById("reasonModalTitle").textContent = `${scoringTeamName} +1 の理由を選択`;
   document.getElementById("reasonModalText").textContent = `${scoringTeamName}に1点が入ります`;
@@ -1094,7 +1134,17 @@ function openReasonModal(team) {
   scoringButtons.innerHTML = "";
   mistakeButtons.innerHTML = "";
 
-  scoringReasons.forEach(reason => {
+  const visibleScoringReasons = scoringReasons.filter(reason => {
+    if (!isScoringTeamServing && reason === "サービスエース") return false;
+    return true;
+  });
+
+  const visibleMistakeReasons = mistakeReasons.filter(reason => {
+    if (isScoringTeamServing && reason === "サーブミス") return false;
+    return true;
+  });
+
+  visibleScoringReasons.forEach(reason => {
     const btn = document.createElement("button");
     btn.className = team === "home" ? "reason-option" : "reason-option away";
     btn.textContent = reason;
@@ -1102,7 +1152,7 @@ function openReasonModal(team) {
     scoringButtons.appendChild(btn);
   });
 
-  mistakeReasons.forEach(reason => {
+  visibleMistakeReasons.forEach(reason => {
     const btn = document.createElement("button");
     btn.className = team === "home" ? "reason-option away" : "reason-option";
     btn.textContent = reason;
@@ -1131,6 +1181,7 @@ function newMatch() {
   setResults = [];
   statsView = "current";
   statsMode = "point";
+  historyView = "current";
   history = [];
 
   document.getElementById("opponentName").value = "";
@@ -1192,6 +1243,7 @@ function startMatch() {
   history = history.filter(item => item.setNumber !== setNumber);
 
   statsView = "current";
+  historyView = "current";
   markDirty();
   closeMatchInfo();
   updateDisplay();
@@ -1235,6 +1287,7 @@ function addPoint(team, reason = "未選択") {
     beforeAwayRotation
   });
 
+  historyView = "current";
   markDirty();
   updateDisplay();
 }
@@ -1369,6 +1422,7 @@ function endSet() {
   awayScore = 0;
   servingTeam = null;
   statsView = "current";
+  historyView = "current";
 
   document.getElementById("startServer").value = nextStartServer;
 
@@ -1432,6 +1486,7 @@ function updateDisplay() {
   }
 
   renderSetSummary();
+  renderHistoryTabs();
   renderHistory();
   renderStats();
 }
@@ -1450,13 +1505,65 @@ function renderSetSummary() {
     });
 }
 
+function setHistoryView(view) {
+  historyView = view;
+  renderHistoryTabs();
+  renderHistory();
+}
+
+function getHistoryTargetSetNumber() {
+  return historyView === "current" ? setNumber : Number(historyView);
+}
+
+function renderHistoryTabs() {
+  const tabs = document.getElementById("historyTabs");
+  const note = document.getElementById("historyViewNote");
+  if (!tabs || !note) return;
+
+  tabs.innerHTML = "";
+
+  getAvailableSetNumbers().forEach(num => {
+    const btn = document.createElement("button");
+    const active = getHistoryTargetSetNumber() === num;
+    btn.className = `history-tab ${active ? "active" : ""}`;
+    btn.textContent = `SET${num}`;
+    btn.onclick = () => setHistoryView(num);
+    tabs.appendChild(btn);
+  });
+
+  const target = getHistoryTargetSetNumber();
+  note.textContent = target === setNumber
+    ? `現在入力中のSET${setNumber}を表示中`
+    : `SET${target}を見返し中（得点入力はSET${setNumber}に入ります）`;
+}
+
 function renderHistory() {
   const historyDiv = document.getElementById("history");
   historyDiv.innerHTML = "";
 
-  history
-    .filter(item => item.setNumber === setNumber)
-    .slice(-6)
+  const targetSetNumber = getHistoryTargetSetNumber();
+  const setHistoryItems = history.filter(item => item.setNumber === targetSetNumber);
+
+  if (setHistoryItems.length === 0) {
+    historyDiv.innerHTML = `
+      <div class="history-row">
+        <div class="badge" style="background:#999;">START</div>
+        <div class="score-history">
+          <span class="gray-text">0</span>
+          <span>-</span>
+          <span class="gray-text">0</span>
+          <div class="reason-text gray-text">セット開始</div>
+        </div>
+        <div class="history-rotation">
+          <span class="gray-text">ー</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  setHistoryItems
+    .slice()
     .reverse()
     .forEach(item => {
       const row = document.createElement("div");
@@ -1468,13 +1575,24 @@ function renderHistory() {
       const homeRot = rotationMap[item.homeRotation];
       const awayRot = rotationMap[item.awayRotation];
 
+      const homeScoreClass = item.scoredTeam === "home" ? "home-text" : "gray-text";
+      const awayScoreClass = item.scoredTeam === "away" ? "away-text" : "gray-text";
+      const isScoringReason = scoringReasons.includes(item.reason);
+
+      let reasonClass = "gray-text";
+      if (isScoringReason) {
+        reasonClass = item.scoredTeam === "home" ? "home-text" : "away-text";
+      } else if (mistakeReasons.includes(item.reason)) {
+        reasonClass = item.scoredTeam === "home" ? "away-text" : "home-text";
+      }
+
       row.innerHTML = `
         <div class="badge ${badgeClass}">${badgeText}</div>
         <div class="score-history">
-          <span class="home-text">${item.homeScore}</span>
+          <span class="${homeScoreClass}">${item.homeScore}</span>
           <span>-</span>
-          <span class="away-text">${item.awayScore}</span>
-          <div class="reason-text">${item.reason || ""}</div>
+          <span class="${awayScoreClass}">${item.awayScore}</span>
+          <div class="reason-text ${reasonClass}">${item.reason || ""}</div>
         </div>
         <div class="history-rotation">
           <span class="home-text">${homeRot}</span>/<span class="away-text">${awayRot}</span>
@@ -1483,6 +1601,25 @@ function renderHistory() {
 
       historyDiv.appendChild(row);
     });
+
+  const first = setHistoryItems[0];
+  const startHomeRot = rotationMap[first.beforeHomeRotation] || "ー";
+  const startAwayRot = rotationMap[first.beforeAwayRotation] || "ー";
+  const startRow = document.createElement("div");
+  startRow.className = "history-row";
+  startRow.innerHTML = `
+    <div class="badge" style="background:#999;">START</div>
+    <div class="score-history">
+      <span class="gray-text">0</span>
+      <span>-</span>
+      <span class="gray-text">0</span>
+      <div class="reason-text gray-text">セット開始</div>
+    </div>
+    <div class="history-rotation">
+      <span class="home-text">${startHomeRot}</span>/<span class="away-text">${startAwayRot}</span>
+    </div>
+  `;
+  historyDiv.appendChild(startRow);
 }
 
 function getAvailableSetNumbers() {
@@ -1911,6 +2048,7 @@ function openMatch(id) {
   setNumber = match.setNumber || 1;
   setResults = match.setResults || [];
   statsView = "current";
+  historyView = "current";
 
   document.getElementById("opponentName").value = match.opponent;
   document.getElementById("startHomeRotation").value = match.homeStartRotation;

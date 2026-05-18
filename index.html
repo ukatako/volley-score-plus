@@ -811,9 +811,21 @@ input, select {
       </div>
 
       <div class="collapse-body">
-        <label>対戦相手</label>
-        <input id="opponentName" placeholder="例：○○高校" oninput="markDirty()" />
+        <label>試合日</label>
+        <input id="matchDate" type="date" onchange="markDirty()" />
 
+        <label style="margin-top:12px;">対戦相手</label>
+        <input id="opponentName" placeholder="例：○○高校" oninput="markDirty()" />
+      </div>
+    </div>
+
+    <div class="collapse open" id="rotationInfoBox">
+      <div class="collapse-head" onclick="toggleRotationInfo()">
+        <span>ローテ情報・サーブ権</span>
+        <span id="rotationInfoArrow">▲</span>
+      </div>
+
+      <div class="collapse-body">
         <div class="setting-grid">
           <div>
             <label>HOME開始ローテ</label>
@@ -850,7 +862,7 @@ input, select {
           </div>
         </div>
 
-        <button class="start-btn" onclick="startMatch()">試合開始 / 設定更新</button>
+        <button class="start-btn" onclick="startMatch()">このセットを開始 / 設定更新</button>
       </div>
     </div>
 
@@ -1082,6 +1094,38 @@ function closeMatchInfo() {
   document.getElementById("matchInfoArrow").textContent = "▼";
 }
 
+function toggleRotationInfo() {
+  const box = document.getElementById("rotationInfoBox");
+  box.classList.toggle("open");
+  document.getElementById("rotationInfoArrow").textContent =
+    box.classList.contains("open") ? "▲" : "▼";
+}
+
+function openRotationInfo() {
+  document.getElementById("rotationInfoBox").classList.add("open");
+  document.getElementById("rotationInfoArrow").textContent = "▲";
+}
+
+function closeRotationInfo() {
+  document.getElementById("rotationInfoBox").classList.remove("open");
+  document.getElementById("rotationInfoArrow").textContent = "▼";
+}
+
+function getTodayDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatMatchDate(dateString) {
+  if (!dateString) return new Date().toLocaleDateString("ja-JP");
+  const parts = dateString.split("-");
+  if (parts.length !== 3) return dateString;
+  return `${Number(parts[0])}/${Number(parts[1])}/${Number(parts[2])}`;
+}
+
 function toggleStats() {
   const box = document.getElementById("statsBox");
   box.classList.toggle("open");
@@ -1184,6 +1228,7 @@ function newMatch() {
   historyView = "current";
   history = [];
 
+  document.getElementById("matchDate").value = getTodayDateString();
   document.getElementById("opponentName").value = "";
   document.getElementById("startHomeRotation").value = "1";
   document.getElementById("startAwayRotation").value = "-";
@@ -1191,6 +1236,7 @@ function newMatch() {
 
   resetCurrentMatch(false);
   openMatchInfo();
+  openRotationInfo();
   showScreen("scoreScreen");
   setStatsMode("point");
 }
@@ -1245,7 +1291,7 @@ function startMatch() {
   statsView = "current";
   historyView = "current";
   markDirty();
-  closeMatchInfo();
+  closeRotationInfo();
   updateDisplay();
 }
 
@@ -1404,7 +1450,11 @@ function endSet() {
     winner: homeScore > awayScore ? "home" : awayScore > homeScore ? "away" : "draw"
   };
 
-  const ok = confirm(`SET${setNumber}を ${homeScore}-${awayScore} で保存し、次のセットへ進みますか？`);
+  const confirmText = setNumber >= 5
+    ? `SET${setNumber}を ${homeScore}-${awayScore} で保存しますか？`
+    : `SET${setNumber}を ${homeScore}-${awayScore} で保存し、次のセットへ進みますか？`;
+
+  const ok = confirm(confirmText);
   if (!ok) return;
 
   const existingIndex = setResults.findIndex(s => s.setNumber === setNumber);
@@ -1412,6 +1462,13 @@ function endSet() {
     setResults[existingIndex] = result;
   } else {
     setResults.push(result);
+  }
+
+  if (setNumber >= 5) {
+    markDirty();
+    updateDisplay();
+    alert("SET5まで記録しました。この試合は終了です。保存してください。");
+    return;
   }
 
   const previousStartServer = document.getElementById("startServer").value;
@@ -1432,7 +1489,8 @@ function endSet() {
   homeRotation = homeStart === "-" ? "-" : Number(homeStart);
   awayRotation = awayStart === "-" ? "-" : Number(awayStart);
 
-  openMatchInfo();
+  closeMatchInfo();
+  openRotationInfo();
   markDirty();
   updateDisplay();
 }
@@ -1961,13 +2019,16 @@ function getSetCount(results) {
 
 function saveMatch(goBack = false) {
   const opponent = document.getElementById("opponentName").value || "未入力";
+  const matchDate = document.getElementById("matchDate").value || getTodayDateString();
   const savedSetResults = getCurrentSetResultsForSave();
   const setCount = getSetCount(savedSetResults);
 
   const matchData = {
     id: currentMatchId || Date.now(),
     opponent,
-    date: new Date().toLocaleString("ja-JP"),
+    matchDate,
+    date: formatMatchDate(matchDate),
+    savedAt: new Date().toLocaleString("ja-JP"),
     setNumber,
     setResults: savedSetResults,
     setCount,
@@ -2022,7 +2083,7 @@ function renderMatchList() {
 
     card.innerHTML = `
       <div onclick="openMatch(${match.id})">
-        <div class="match-date">${match.date}</div>
+        <div class="match-date">${formatMatchDate(match.matchDate || match.date)}</div>
         <div class="match-opponent">vs ${match.opponent}</div>
         <div class="match-score">
           <span class="home-text">${setCount.homeSets}</span>
@@ -2050,6 +2111,7 @@ function openMatch(id) {
   statsView = "current";
   historyView = "current";
 
+  document.getElementById("matchDate").value = match.matchDate || getTodayDateString();
   document.getElementById("opponentName").value = match.opponent;
   document.getElementById("startHomeRotation").value = match.homeStartRotation;
   document.getElementById("startAwayRotation").value = match.awayStartRotation;
@@ -2074,6 +2136,7 @@ function openMatch(id) {
 
   isDirty = false;
   closeMatchInfo();
+  closeRotationInfo();
   updateDisplay();
   showScreen("scoreScreen");
   setStatsMode("point");

@@ -698,70 +698,158 @@ input, select {
 }
 
 
-.score-graph-card {
+.flow-card {
   margin-top: 12px;
   border: 1px solid #ddd;
   border-radius: 14px;
   background: #fff;
-  overflow: hidden;
+  padding: 14px 12px;
 }
 
-.score-graph-header {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+.flow-card-title {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 12px 4px;
+}
+
+.flow-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f5ff;
+  color: #1557e6;
+  font-size: 16px;
+}
+
+.flow-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.flow-box {
+  border-radius: 14px;
+  padding: 14px 8px;
+  text-align: center;
+  background: #f6f7fb;
+}
+
+.flow-box.home {
+  background: #eef5ff;
+  border: 1px solid #cfe0ff;
+}
+
+.flow-box.away {
+  background: #fff1f1;
+  border: 1px solid #ffd0d0;
+}
+
+.flow-team {
   font-size: 13px;
   font-weight: 900;
 }
 
-.score-graph-title {
-  text-align: center;
-  font-size: 15px;
+.flow-big {
+  font-size: 36px;
+  font-weight: 900;
+  line-height: 1.1;
+  margin: 4px 0;
+}
+
+.flow-unit {
+  font-size: 14px;
+  font-weight: 900;
+  color: #222;
+  margin-left: 2px;
+}
+
+.flow-range {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.78);
+  font-size: 12px;
+  font-weight: 900;
   color: #333;
 }
 
-.score-graph-wrap {
-  width: 100%;
-  overflow-x: auto;
-  padding: 4px 8px 10px;
-}
-
-.score-flow-svg {
-  width: 100%;
-  min-width: 360px;
-  height: 220px;
-  display: block;
-}
-
-.graph-summary {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-  padding: 0 10px 12px;
-}
-
-.graph-summary-box {
-  background: #f6f7fb;
-  border-radius: 10px;
-  padding: 10px 4px;
+.flow-lead-center {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8f8f8;
   text-align: center;
 }
 
-.graph-summary-label {
-  font-size: 11px;
+.flow-lead-label {
+  font-size: 12px;
   font-weight: 900;
   color: #666;
+  margin-bottom: 6px;
 }
 
-.graph-summary-value {
-  font-size: 20px;
+.flow-lead-value {
+  font-size: 24px;
   font-weight: 900;
-  margin-top: 3px;
 }
 
-.graph-empty {
+.flow-point-list {
+  display: grid;
+  gap: 8px;
+}
+
+.flow-point-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background: #fafafa;
+}
+
+.flow-point-tag {
+  text-align: center;
+  border-radius: 999px;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #eee;
+}
+
+.flow-point-tag.home {
+  background: #eef5ff;
+  color: #1557e6;
+}
+
+.flow-point-tag.away {
+  background: #fff1f1;
+  color: #e91f26;
+}
+
+.flow-point-text {
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.flow-point-score {
+  display: inline-block;
+  margin-top: 3px;
+  color: #666;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.flow-empty {
   padding: 22px 12px;
   text-align: center;
   color: #666;
@@ -1011,7 +1099,7 @@ input, select {
               サイドアウト&ブレイク
             </button>
             <button class="stats-main-tab" id="graphTab" onclick="setStatsMode('graph')">
-              グラフ
+              流れ分析
             </button>
           </div>
 
@@ -1811,135 +1899,280 @@ function renderStats() {
 
   renderPointStats();
   renderSideoutStats();
-  renderScoreFlowGraph();
+  renderFlowAnalysis();
 }
 
 
-function renderScoreFlowGraph() {
+function renderFlowAnalysis() {
   const items = getStatsItems();
   const div = document.getElementById("graphStatsView");
   if (!div) return;
 
   if (items.length === 0) {
     div.innerHTML = `
-      <div class="score-graph-card">
-        <div class="graph-empty">まだグラフに表示する得点履歴がありません</div>
+      <div class="flow-card">
+        <div class="flow-empty">まだ流れ分析に表示する得点履歴がありません</div>
       </div>
     `;
     return;
   }
 
-  const points = [{ x: 0, diff: 0, home: 0, away: 0 }];
+  const analysis = calculateFlowAnalysis(items);
+  const homeRun = analysis.maxRuns.home;
+  const awayRun = analysis.maxRuns.away;
+  const homeLead = analysis.maxLeads.home;
+  const awayLead = analysis.maxLeads.away;
+  const biggestRunTeam = homeRun.length >= awayRun.length ? "home" : "away";
+  const biggestRunText = biggestRunTeam === "home" ? "HOME" : "AWAY";
+  const biggestRunClass = biggestRunTeam === "home" ? "home-text" : "away-text";
 
-  items.forEach((item, index) => {
-    points.push({
-      x: index + 1,
-      diff: item.homeScore - item.awayScore,
-      home: item.homeScore,
-      away: item.awayScore,
-      scoredTeam: item.scoredTeam,
-      reason: item.reason || ""
-    });
-  });
-
-  const maxAbsDiff = Math.max(1, ...points.map(p => Math.abs(p.diff)));
-  const yLimit = Math.max(5, maxAbsDiff);
-  const width = Math.max(360, 80 + points.length * 12);
-  const height = 220;
-  const pad = { left: 42, right: 18, top: 20, bottom: 34 };
-  const plotW = width - pad.left - pad.right;
-  const plotH = height - pad.top - pad.bottom;
-
-  const xScale = x => pad.left + (points.length === 1 ? 0 : (x / (points.length - 1)) * plotW);
-  const yScale = diff => pad.top + ((yLimit - diff) / (yLimit * 2)) * plotH;
-  const zeroY = yScale(0);
-
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${xScale(p.x)},${yScale(p.diff)}`).join(" ");
-  const areaPath = `${path} L${xScale(points[points.length - 1].x)},${zeroY} L${xScale(0)},${zeroY} Z`;
-
-  const yTicks = [-yLimit, 0, yLimit];
-  const gridLines = yTicks.map(t => `
-    <line x1="${pad.left}" y1="${yScale(t)}" x2="${width - pad.right}" y2="${yScale(t)}" stroke="${t === 0 ? '#999' : '#e2e2e2'}" stroke-width="${t === 0 ? 1.5 : 1}" stroke-dasharray="${t === 0 ? '3 3' : '0'}" />
-    <text x="${pad.left - 8}" y="${yScale(t) + 4}" text-anchor="end" font-size="11" font-weight="800" fill="#555">${t > 0 ? '+' + t : t}</text>
-  `).join("");
-
-  const xTickCount = Math.min(5, points.length - 1);
-  let xTicks = "";
-  if (xTickCount > 0) {
-    for (let i = 0; i <= xTickCount; i++) {
-      const xValue = Math.round(((points.length - 1) / xTickCount) * i);
-      const x = xScale(xValue);
-      xTicks += `
-        <line x1="${x}" y1="${pad.top}" x2="${x}" y2="${height - pad.bottom}" stroke="#eeeeee" stroke-width="1" />
-        <text x="${x}" y="${height - 10}" text-anchor="middle" font-size="10" font-weight="800" fill="#666">${xValue}</text>
+  const pointRows = analysis.keyPoints.length > 0
+    ? analysis.keyPoints.map(point => `
+        <div class="flow-point-row">
+          <div class="flow-point-tag ${point.team}">${point.label}</div>
+          <div class="flow-point-text">
+            ${point.text}
+            <br><span class="flow-point-score">${point.range}</span>
+          </div>
+        </div>
+      `).join("")
+    : `
+        <div class="flow-point-row">
+          <div class="flow-point-tag">確認</div>
+          <div class="flow-point-text">
+            まだ大きな勝負所はありません
+            <br><span class="flow-point-score">得点が進むと自動表示されます</span>
+          </div>
+        </div>
       `;
-    }
-  }
-
-  const dots = points.slice(1).map(p => {
-    const color = p.diff > 0 ? "#1557e6" : p.diff < 0 ? "#e91f26" : "#777";
-    return `<circle cx="${xScale(p.x)}" cy="${yScale(p.diff)}" r="3" fill="${color}" />`;
-  }).join("");
-
-  const last = points[points.length - 1];
-  const maxHomeLead = Math.max(...points.map(p => p.diff));
-  const maxAwayLead = Math.min(...points.map(p => p.diff));
-  const leadChanges = countLeadChanges(points);
 
   div.innerHTML = `
-    <div class="score-graph-card">
-      <div class="score-graph-header">
-        <div class="home-text">HOMEリード</div>
-        <div class="score-graph-title">点差推移</div>
-        <div class="away-text" style="text-align:right;">AWAYリード</div>
-      </div>
-      <div class="score-graph-wrap">
-        <svg class="score-flow-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="スコア推移グラフ">
-          <rect x="0" y="0" width="${width}" height="${height}" fill="#fff" />
-          ${xTicks}
-          ${gridLines}
-          <path d="${areaPath}" fill="rgba(21,87,230,0.08)" />
-          <path d="${path}" fill="none" stroke="#1557e6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-          ${dots}
-          <text x="${width - pad.right}" y="${height - 10}" text-anchor="end" font-size="10" font-weight="800" fill="#666">得点経過</text>
-        </svg>
-      </div>
-      <div class="graph-summary">
-        <div class="graph-summary-box">
-          <div class="graph-summary-label">現在点差</div>
-          <div class="graph-summary-value ${diffClass(last.diff)}">${formatDiff(last.diff)}</div>
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">🔥</span>最大連続得点</div>
+      <div class="flow-two-col">
+        <div class="flow-box home">
+          <div class="flow-team home-text">HOME</div>
+          <div class="flow-big home-text">${homeRun.length}<span class="flow-unit">連続</span></div>
+          <div class="flow-range">${homeRun.range || "ー"}</div>
         </div>
-        <div class="graph-summary-box">
-          <div class="graph-summary-label">最大リード</div>
-          <div class="graph-summary-value home-text">+${maxHomeLead}</div>
+        <div class="flow-box away">
+          <div class="flow-team away-text">AWAY</div>
+          <div class="flow-big away-text">${awayRun.length}<span class="flow-unit">連続</span></div>
+          <div class="flow-range">${awayRun.range || "ー"}</div>
         </div>
-        <div class="graph-summary-box">
-          <div class="graph-summary-label">リード変化</div>
-          <div class="graph-summary-value gray-text">${leadChanges}回</div>
+      </div>
+      <div class="flow-lead-center">
+        <div class="flow-lead-label">最大RUN</div>
+        <div class="flow-lead-value ${biggestRunClass}">${biggestRunText} ${Math.max(homeRun.length, awayRun.length)}連続</div>
+      </div>
+    </div>
+
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">📊</span>リードの最大差</div>
+      <div class="flow-two-col">
+        <div class="flow-box home">
+          <div class="flow-team home-text">HOME最大リード</div>
+          <div class="flow-big home-text">+${homeLead.value}<span class="flow-unit">点</span></div>
+          <div class="flow-range">${homeLead.score || "ー"}</div>
+        </div>
+        <div class="flow-box away">
+          <div class="flow-team away-text">AWAY最大リード</div>
+          <div class="flow-big away-text">+${awayLead.value}<span class="flow-unit">点</span></div>
+          <div class="flow-range">${awayLead.score || "ー"}</div>
         </div>
       </div>
     </div>
+
+    <div class="flow-card">
+      <div class="flow-card-title"><span class="flow-card-icon">⭐</span>勝負のポイント</div>
+      <div class="flow-point-list">
+        ${pointRows}
+      </div>
+    </div>
+
     <div class="note">
-      ※0は同点、上に行くほどHOMEリード、下に行くほどAWAYリードです。<br>
-      ※横軸は得点の経過です。
+      ※流れ分析は得点履歴をもとに、連続得点・点差・終盤局面から自動抽出しています。<br>
+      ※勝負のポイントは「逆転」「20点以降の連続得点」「セット最終局面」を優先して表示します。
     </div>
   `;
 }
 
-function countLeadChanges(points) {
-  let prevSign = 0;
-  let changes = 0;
+function calculateFlowAnalysis(items) {
+  const states = [{ home: 0, away: 0, diff: 0, scoredTeam: null, reason: "", index: 0 }];
+  items.forEach((item, index) => {
+    states.push({
+      home: item.homeScore,
+      away: item.awayScore,
+      diff: item.homeScore - item.awayScore,
+      scoredTeam: item.scoredTeam,
+      reason: item.reason || "",
+      index: index + 1
+    });
+  });
 
-  points.forEach(p => {
-    const sign = p.diff > 0 ? 1 : p.diff < 0 ? -1 : 0;
-    if (sign !== 0) {
-      if (prevSign !== 0 && sign !== prevSign) changes++;
-      prevSign = sign;
+  const runs = buildRuns(states);
+  const maxHomeRun = getMaxRun(runs, "home");
+  const maxAwayRun = getMaxRun(runs, "away");
+  const maxLeads = getMaxLeads(states);
+  const keyPoints = buildKeyPoints(states, runs);
+
+  return {
+    maxRuns: {
+      home: maxHomeRun,
+      away: maxAwayRun
+    },
+    maxLeads,
+    keyPoints
+  };
+}
+
+function buildRuns(states) {
+  const runs = [];
+  let current = null;
+
+  for (let i = 1; i < states.length; i++) {
+    const team = states[i].scoredTeam;
+    if (!team) continue;
+
+    if (!current || current.team !== team) {
+      if (current) runs.push(current);
+      current = {
+        team,
+        startIndex: i,
+        endIndex: i,
+        length: 1,
+        startScore: scoreText(states[i - 1]),
+        endScore: scoreText(states[i]),
+        startDiff: states[i - 1].diff,
+        endDiff: states[i].diff,
+        lastReason: states[i].reason || ""
+      };
+    } else {
+      current.endIndex = i;
+      current.length++;
+      current.endScore = scoreText(states[i]);
+      current.endDiff = states[i].diff;
+      current.lastReason = states[i].reason || current.lastReason;
+    }
+  }
+
+  if (current) runs.push(current);
+  return runs.map(run => ({
+    ...run,
+    range: `${run.startScore} → ${run.endScore}`
+  }));
+}
+
+function getMaxRun(runs, team) {
+  const teamRuns = runs.filter(run => run.team === team);
+  if (teamRuns.length === 0) {
+    return { team, length: 0, range: "ー", startScore: "ー", endScore: "ー" };
+  }
+
+  return teamRuns.reduce((best, run) => {
+    if (run.length > best.length) return run;
+    if (run.length === best.length && run.endIndex > best.endIndex) return run;
+    return best;
+  }, teamRuns[0]);
+}
+
+function getMaxLeads(states) {
+  let home = { value: 0, score: "0-0" };
+  let away = { value: 0, score: "0-0" };
+
+  states.forEach(state => {
+    if (state.diff > home.value) {
+      home = { value: state.diff, score: scoreText(state) };
+    }
+    if (-state.diff > away.value) {
+      away = { value: -state.diff, score: scoreText(state) };
     }
   });
 
-  return changes;
+  return { home, away };
 }
+
+function buildKeyPoints(states, runs) {
+  const points = [];
+
+  const comeback = runs
+    .filter(run => {
+      if (run.team === "home") return run.startDiff <= 0 && run.endDiff > 0 && run.length >= 2;
+      return run.startDiff >= 0 && run.endDiff < 0 && run.length >= 2;
+    })
+    .sort((a, b) => b.length - a.length || b.endIndex - a.endIndex)[0];
+
+  if (comeback) {
+    points.push({
+      label: "逆転",
+      team: comeback.team,
+      text: `${teamLabel(comeback.team)}が${comeback.length}連続得点で逆転`,
+      range: comeback.range
+    });
+  }
+
+  const lateRun = runs
+    .filter(run => {
+      const startTotal = scoreTotal(run.startScore);
+      const endTotal = scoreTotal(run.endScore);
+      return run.length >= 2 && (startTotal >= 38 || endTotal >= 40 || scoreMax(run.startScore) >= 20 || scoreMax(run.endScore) >= 20);
+    })
+    .sort((a, b) => b.endIndex - a.endIndex)[0];
+
+  if (lateRun && !points.some(p => p.range === lateRun.range)) {
+    points.push({
+      label: "終盤RUN",
+      team: lateRun.team,
+      text: `${teamLabel(lateRun.team)}が終盤に${lateRun.length}連続得点`,
+      range: lateRun.range
+    });
+  }
+
+  const last = states[states.length - 1];
+  if (last && last.index > 0) {
+    const lastTeam = last.scoredTeam;
+    const reasonText = last.reason ? `（${last.reason}）` : "";
+    const lastLabel = Math.max(last.home, last.away) >= 24 ? "最終局面" : "直近";
+    const prev = states[states.length - 2] || { home: 0, away: 0 };
+    const lastRange = `${scoreText(prev)} → ${scoreText(last)}`;
+
+    if (!points.some(p => p.range === lastRange)) {
+      points.push({
+        label: lastLabel,
+        team: lastTeam,
+        text: `${teamLabel(lastTeam)}の得点${reasonText}`,
+        range: lastRange
+      });
+    }
+  }
+
+  return points.slice(0, 3);
+}
+
+function scoreText(state) {
+  if (typeof state === "string") return state;
+  return `${state.home}-${state.away}`;
+}
+
+function scoreParts(score) {
+  const parts = String(score).split("-").map(Number);
+  return { home: parts[0] || 0, away: parts[1] || 0 };
+}
+
+function scoreTotal(score) {
+  const parts = scoreParts(score);
+  return parts.home + parts.away;
+}
+
+function scoreMax(score) {
+  const parts = scoreParts(score);
+  return Math.max(parts.home, parts.away);
+}
+
+function teamLabel(team) {
+  return team === "home" ? "HOME" : "AWAY";
+}
+
 
 function renderPointStats() {
   const items = getStatsItems();

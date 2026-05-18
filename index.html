@@ -474,6 +474,73 @@ input, select {
   margin-top: 12px;
 }
 
+
+.point-table {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  margin-top: 12px;
+}
+
+.point-head {
+  display: grid;
+  grid-template-columns: 72px 1fr 72px;
+  padding: 12px 8px;
+  font-size: 20px;
+  font-weight: 900;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  background: #f8f8f8;
+}
+
+.point-section-title {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 8px 6px;
+  font-weight: 900;
+  color: #1557e6;
+  text-align: center;
+}
+
+.point-section-title.mistake {
+  color: #e91f26;
+}
+
+.point-section-title::before,
+.point-section-title::after {
+  content: "";
+  height: 1px;
+  background: #ddd;
+}
+
+.point-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 72px;
+  align-items: center;
+  min-height: 54px;
+  padding: 6px 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.point-row:last-child {
+  border-bottom: none;
+}
+
+.point-label {
+  text-align: center;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.point-num {
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+}
+
 .stats-tabs { margin: 12px 0; }
 
 .stats-tab {
@@ -795,17 +862,13 @@ input, select {
             </button>
           </div>
 
-          <div id="pointStatsView">
-            <div class="point-info-placeholder">
-              点数情報は次の更新で表示します
-            </div>
-          </div>
+          <h3 style="margin:0;" id="statsTitle">SET 1</h3>
+
+          <div class="stats-tabs" id="statsTabs"></div>
+
+          <div id="pointStatsView"></div>
 
           <div id="sideoutStatsView" style="display:none;">
-            <h3 style="margin:0;" id="statsTitle">SET 1</h3>
-
-            <div class="stats-tabs" id="statsTabs"></div>
-
             <div class="stats-top">
               <div class="stats-box">
                 <div class="stats-label">得失点</div>
@@ -923,6 +986,7 @@ const rotationOrder = [1, 2, 3, 4, 5, 6];
 
 const scoringReasons = ["アタック決定", "サービスエース", "ブロック得点"];
 const mistakeReasons = ["アタック失点", "サーブミス", "その他のミス"];
+const allReasons = [...scoringReasons, ...mistakeReasons];
 
 function markDirty() {
   isDirty = true;
@@ -1439,11 +1503,88 @@ function getStatsTitle() {
 
 function renderStats() {
   renderStatsTabs();
+  document.getElementById("statsTitle").textContent = getStatsTitle();
 
+  renderPointStats();
+  renderSideoutStats();
+}
+
+function renderPointStats() {
+  const items = getStatsItems();
+  const stats = calculatePointStats(items);
+  const div = document.getElementById("pointStatsView");
+
+  let html = `
+    <div class="point-table">
+      <div class="point-head">
+        <div class="home-text">HOME</div>
+        <div>項目</div>
+        <div class="away-text">AWAY</div>
+      </div>
+      <div class="point-section-title">得点理由</div>
+  `;
+
+  scoringReasons.forEach(reason => {
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason]);
+  });
+
+  html += `<div class="point-section-title mistake">失点理由</div>`;
+
+  mistakeReasons.forEach(reason => {
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason]);
+  });
+
+  html += `
+    </div>
+    <div class="note">※左がHOME、右がAWAYの実数です。</div>
+  `;
+
+  div.innerHTML = html;
+}
+
+function pointRowHtml(label, homeValue, awayValue) {
+  const homeClass = homeValue > awayValue ? "home-text" : "gray-text";
+  const awayClass = awayValue > homeValue ? "away-text" : "gray-text";
+
+  return `
+    <div class="point-row">
+      <div class="point-num ${homeClass}">${homeValue}</div>
+      <div class="point-label">${label}</div>
+      <div class="point-num ${awayClass}">${awayValue}</div>
+    </div>
+  `;
+}
+
+function calculatePointStats(items) {
+  const home = {};
+  const away = {};
+
+  allReasons.forEach(reason => {
+    home[reason] = 0;
+    away[reason] = 0;
+  });
+
+  items.forEach(item => {
+    const reason = item.reason;
+    if (!allReasons.includes(reason)) return;
+
+    if (scoringReasons.includes(reason)) {
+      if (item.scoredTeam === "home") home[reason]++;
+      else away[reason]++;
+    }
+
+    if (mistakeReasons.includes(reason)) {
+      if (item.scoredTeam === "home") away[reason]++;
+      else home[reason]++;
+    }
+  });
+
+  return { home, away };
+}
+
+function renderSideoutStats() {
   const items = getStatsItems();
   const stats = calculateStats(items);
-
-  document.getElementById("statsTitle").textContent = getStatsTitle();
 
   document.getElementById("totalDiff").textContent = formatDiff(stats.total.diff);
   document.getElementById("totalDiff").className = `stats-value ${diffClass(stats.total.diff)}`;

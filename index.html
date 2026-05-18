@@ -541,6 +541,35 @@ input, select {
   text-align: center;
 }
 
+.point-percent {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.compare-bar-wrap {
+  height: 8px;
+  border-radius: 999px;
+  background: #ddd;
+  overflow: hidden;
+  margin: 6px auto 0;
+  display: flex;
+  width: 100%;
+  max-width: 150px;
+}
+
+.compare-blue {
+  background: #1557e6;
+  height: 100%;
+}
+
+.compare-red {
+  background: #e91f26;
+  height: 100%;
+}
+
 .stats-tabs { margin: 12px 0; }
 
 .stats-tab {
@@ -1513,6 +1542,7 @@ function renderPointStats() {
   const items = getStatsItems();
   const stats = calculatePointStats(items);
   const div = document.getElementById("pointStatsView");
+  const isTotal = statsView === "total";
 
   let html = `
     <div class="point-table">
@@ -1525,32 +1555,62 @@ function renderPointStats() {
   `;
 
   scoringReasons.forEach(reason => {
-    html += pointRowHtml(reason, stats.home[reason], stats.away[reason]);
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason], isTotal);
   });
 
   html += `<div class="point-section-title mistake">失点理由</div>`;
 
   mistakeReasons.forEach(reason => {
-    html += pointRowHtml(reason, stats.home[reason], stats.away[reason]);
+    html += pointRowHtml(reason, stats.home[reason], stats.away[reason], isTotal);
   });
 
   html += `
     </div>
-    <div class="note">※左がHOME、右がAWAYの実数です。</div>
+    <div class="note">
+      ${isTotal
+        ? "※TOTALは実数合計を大きく表示し、割合を（）内に表示しています。"
+        : "※左がHOME、右がAWAYの実数です。"}
+    </div>
   `;
 
   div.innerHTML = html;
 }
 
-function pointRowHtml(label, homeValue, awayValue) {
+function pointRowHtml(label, homeValue, awayValue, isTotal) {
+  const total = homeValue + awayValue;
+  const homePercent = total ? Math.round((homeValue / total) * 100) : 0;
+  const awayPercent = total ? 100 - homePercent : 0;
+
   const homeClass = homeValue > awayValue ? "home-text" : "gray-text";
   const awayClass = awayValue > homeValue ? "away-text" : "gray-text";
 
+  if (!isTotal) {
+    return `
+      <div class="point-row">
+        <div class="point-num ${homeClass}">${homeValue}</div>
+        <div class="point-label">${label}</div>
+        <div class="point-num ${awayClass}">${awayValue}</div>
+      </div>
+    `;
+  }
+
   return `
     <div class="point-row">
-      <div class="point-num ${homeClass}">${homeValue}</div>
-      <div class="point-label">${label}</div>
-      <div class="point-num ${awayClass}">${awayValue}</div>
+      <div class="point-num ${homeClass}">
+        ${homeValue}
+        <span class="point-percent">(${homePercent}%)</span>
+      </div>
+      <div>
+        <div class="point-label">${label}</div>
+        <div class="compare-bar-wrap">
+          <div class="compare-blue" style="width:${homePercent}%"></div>
+          <div class="compare-red" style="width:${awayPercent}%"></div>
+        </div>
+      </div>
+      <div class="point-num ${awayClass}">
+        ${awayValue}
+        <span class="point-percent">(${awayPercent}%)</span>
+      </div>
     </div>
   `;
 }

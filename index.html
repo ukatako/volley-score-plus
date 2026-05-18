@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Volley Score Plus</title>
 
+<meta name="theme-color" content="#1557e6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Volley Score Plus">
+<link rel="manifest" href="manifest.json">
+
 <link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 
@@ -930,10 +936,29 @@ input, select {
 .danger-btn { background: #e91f26; color: white; }
 .primary-btn { background: #1557e6; color: white; }
 .cancel-btn { background: #eee; color: #111; }
+
+.offline-badge {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 999;
+  background: #111;
+  color: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  display: none;
+}
+
+.offline-badge.show { display: block; }
+
 </style>
 </head>
 
 <body>
+<div class="offline-badge" id="offlineBadge">オフライン使用中</div>
 <div class="app">
 
   <div id="listScreen" class="screen active">
@@ -2600,6 +2625,26 @@ function confirmDelete() {
   localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
   closeDeleteModal();
   renderMatchList();
+}
+
+
+
+function updateOfflineBadge() {
+  const badge = document.getElementById("offlineBadge");
+  if (!badge) return;
+  badge.classList.toggle("show", !navigator.onLine);
+}
+
+window.addEventListener("online", updateOfflineBadge);
+window.addEventListener("offline", updateOfflineBadge);
+updateOfflineBadge();
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(err => {
+      console.log("Service Worker registration failed:", err);
+    });
+  });
 }
 
 renderMatchList();

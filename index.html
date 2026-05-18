@@ -477,7 +477,7 @@ input, select {
 
 .stats-main-tabs {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   background: #f0f0f0;
   border-radius: 12px;
   overflow: hidden;
@@ -695,6 +695,77 @@ input, select {
   color: #444;
   line-height: 1.6;
   margin-top: 10px;
+}
+
+
+.score-graph-card {
+  margin-top: 12px;
+  border: 1px solid #ddd;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.score-graph-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 4px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.score-graph-title {
+  text-align: center;
+  font-size: 15px;
+  color: #333;
+}
+
+.score-graph-wrap {
+  width: 100%;
+  overflow-x: auto;
+  padding: 4px 8px 10px;
+}
+
+.score-flow-svg {
+  width: 100%;
+  min-width: 360px;
+  height: 220px;
+  display: block;
+}
+
+.graph-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  padding: 0 10px 12px;
+}
+
+.graph-summary-box {
+  background: #f6f7fb;
+  border-radius: 10px;
+  padding: 10px 4px;
+  text-align: center;
+}
+
+.graph-summary-label {
+  font-size: 11px;
+  font-weight: 900;
+  color: #666;
+}
+
+.graph-summary-value {
+  font-size: 20px;
+  font-weight: 900;
+  margin-top: 3px;
+}
+
+.graph-empty {
+  padding: 22px 12px;
+  text-align: center;
+  color: #666;
+  font-weight: 900;
 }
 
 .modal-bg {
@@ -939,6 +1010,9 @@ input, select {
             <button class="stats-main-tab" id="sideoutTab" onclick="setStatsMode('sideout')">
               サイドアウト&ブレイク
             </button>
+            <button class="stats-main-tab" id="graphTab" onclick="setStatsMode('graph')">
+              グラフ
+            </button>
           </div>
 
           <h3 style="margin:0;" id="statsTitle">SET 1</h3>
@@ -986,6 +1060,8 @@ input, select {
               ※％は小数なしの切り上げ表示
             </div>
           </div>
+
+          <div id="graphStatsView" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -1143,16 +1219,20 @@ function setStatsMode(mode) {
 
   const pointTab = document.getElementById("pointInfoTab");
   const sideoutTab = document.getElementById("sideoutTab");
+  const graphTab = document.getElementById("graphTab");
   const pointView = document.getElementById("pointStatsView");
   const sideoutView = document.getElementById("sideoutStatsView");
+  const graphView = document.getElementById("graphStatsView");
 
-  if (!pointTab || !sideoutTab || !pointView || !sideoutView) return;
+  if (!pointTab || !sideoutTab || !graphTab || !pointView || !sideoutView || !graphView) return;
 
   pointTab.classList.toggle("active", mode === "point");
   sideoutTab.classList.toggle("active", mode === "sideout");
+  graphTab.classList.toggle("active", mode === "graph");
 
   pointView.style.display = mode === "point" ? "block" : "none";
   sideoutView.style.display = mode === "sideout" ? "block" : "none";
+  graphView.style.display = mode === "graph" ? "block" : "none";
 }
 
 function openReasonModal(team) {
@@ -1731,6 +1811,134 @@ function renderStats() {
 
   renderPointStats();
   renderSideoutStats();
+  renderScoreFlowGraph();
+}
+
+
+function renderScoreFlowGraph() {
+  const items = getStatsItems();
+  const div = document.getElementById("graphStatsView");
+  if (!div) return;
+
+  if (items.length === 0) {
+    div.innerHTML = `
+      <div class="score-graph-card">
+        <div class="graph-empty">まだグラフに表示する得点履歴がありません</div>
+      </div>
+    `;
+    return;
+  }
+
+  const points = [{ x: 0, diff: 0, home: 0, away: 0 }];
+
+  items.forEach((item, index) => {
+    points.push({
+      x: index + 1,
+      diff: item.homeScore - item.awayScore,
+      home: item.homeScore,
+      away: item.awayScore,
+      scoredTeam: item.scoredTeam,
+      reason: item.reason || ""
+    });
+  });
+
+  const maxAbsDiff = Math.max(1, ...points.map(p => Math.abs(p.diff)));
+  const yLimit = Math.max(5, maxAbsDiff);
+  const width = Math.max(360, 80 + points.length * 12);
+  const height = 220;
+  const pad = { left: 42, right: 18, top: 20, bottom: 34 };
+  const plotW = width - pad.left - pad.right;
+  const plotH = height - pad.top - pad.bottom;
+
+  const xScale = x => pad.left + (points.length === 1 ? 0 : (x / (points.length - 1)) * plotW);
+  const yScale = diff => pad.top + ((yLimit - diff) / (yLimit * 2)) * plotH;
+  const zeroY = yScale(0);
+
+  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${xScale(p.x)},${yScale(p.diff)}`).join(" ");
+  const areaPath = `${path} L${xScale(points[points.length - 1].x)},${zeroY} L${xScale(0)},${zeroY} Z`;
+
+  const yTicks = [-yLimit, 0, yLimit];
+  const gridLines = yTicks.map(t => `
+    <line x1="${pad.left}" y1="${yScale(t)}" x2="${width - pad.right}" y2="${yScale(t)}" stroke="${t === 0 ? '#999' : '#e2e2e2'}" stroke-width="${t === 0 ? 1.5 : 1}" stroke-dasharray="${t === 0 ? '3 3' : '0'}" />
+    <text x="${pad.left - 8}" y="${yScale(t) + 4}" text-anchor="end" font-size="11" font-weight="800" fill="#555">${t > 0 ? '+' + t : t}</text>
+  `).join("");
+
+  const xTickCount = Math.min(5, points.length - 1);
+  let xTicks = "";
+  if (xTickCount > 0) {
+    for (let i = 0; i <= xTickCount; i++) {
+      const xValue = Math.round(((points.length - 1) / xTickCount) * i);
+      const x = xScale(xValue);
+      xTicks += `
+        <line x1="${x}" y1="${pad.top}" x2="${x}" y2="${height - pad.bottom}" stroke="#eeeeee" stroke-width="1" />
+        <text x="${x}" y="${height - 10}" text-anchor="middle" font-size="10" font-weight="800" fill="#666">${xValue}</text>
+      `;
+    }
+  }
+
+  const dots = points.slice(1).map(p => {
+    const color = p.diff > 0 ? "#1557e6" : p.diff < 0 ? "#e91f26" : "#777";
+    return `<circle cx="${xScale(p.x)}" cy="${yScale(p.diff)}" r="3" fill="${color}" />`;
+  }).join("");
+
+  const last = points[points.length - 1];
+  const maxHomeLead = Math.max(...points.map(p => p.diff));
+  const maxAwayLead = Math.min(...points.map(p => p.diff));
+  const leadChanges = countLeadChanges(points);
+
+  div.innerHTML = `
+    <div class="score-graph-card">
+      <div class="score-graph-header">
+        <div class="home-text">HOMEリード</div>
+        <div class="score-graph-title">点差推移</div>
+        <div class="away-text" style="text-align:right;">AWAYリード</div>
+      </div>
+      <div class="score-graph-wrap">
+        <svg class="score-flow-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-label="スコア推移グラフ">
+          <rect x="0" y="0" width="${width}" height="${height}" fill="#fff" />
+          ${xTicks}
+          ${gridLines}
+          <path d="${areaPath}" fill="rgba(21,87,230,0.08)" />
+          <path d="${path}" fill="none" stroke="#1557e6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          ${dots}
+          <text x="${width - pad.right}" y="${height - 10}" text-anchor="end" font-size="10" font-weight="800" fill="#666">得点経過</text>
+        </svg>
+      </div>
+      <div class="graph-summary">
+        <div class="graph-summary-box">
+          <div class="graph-summary-label">現在点差</div>
+          <div class="graph-summary-value ${diffClass(last.diff)}">${formatDiff(last.diff)}</div>
+        </div>
+        <div class="graph-summary-box">
+          <div class="graph-summary-label">最大リード</div>
+          <div class="graph-summary-value home-text">+${maxHomeLead}</div>
+        </div>
+        <div class="graph-summary-box">
+          <div class="graph-summary-label">リード変化</div>
+          <div class="graph-summary-value gray-text">${leadChanges}回</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      ※0は同点、上に行くほどHOMEリード、下に行くほどAWAYリードです。<br>
+      ※横軸は得点の経過です。
+    </div>
+  `;
+}
+
+function countLeadChanges(points) {
+  let prevSign = 0;
+  let changes = 0;
+
+  points.forEach(p => {
+    const sign = p.diff > 0 ? 1 : p.diff < 0 ? -1 : 0;
+    if (sign !== 0) {
+      if (prevSign !== 0 && sign !== prevSign) changes++;
+      prevSign = sign;
+    }
+  });
+
+  return changes;
 }
 
 function renderPointStats() {

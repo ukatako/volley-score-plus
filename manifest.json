@@ -1,6 +1,6 @@
 {
   "name": "Volley Score Plus",
-  "short_name": "Score Plus",
+  "short_name": "Volley Score Plus",
   "description": "バレーボール専用スコア・ローテ・流れ分析アプリ",
   "start_url": "./index.html",
   "scope": "./",

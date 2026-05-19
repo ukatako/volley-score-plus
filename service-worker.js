@@ -1,4 +1,4 @@
-const CACHE_NAME = "volley-score-plus-v1";
+const CACHE_NAME = "volley-score-plus-v2";
 const APP_SHELL = [
   "./",
   "./index.html",

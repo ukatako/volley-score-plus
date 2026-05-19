@@ -31,6 +31,33 @@ body {
   background: #f7f7f7;
 }
 
+@media (min-width: 700px) {
+  .app {
+    max-width: 820px;
+  }
+
+  .score-area {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .main-buttons,
+  .sub-buttons {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .history,
+  .stats-card,
+  .collapse {
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 .header {
   background: #1557e6;
   color: white;
@@ -246,7 +273,7 @@ label {
   margin-bottom: 6px;
 }
 
-input, select {
+input, select, textarea {
   width: 100%;
   padding: 12px;
   border-radius: 8px;
@@ -254,6 +281,12 @@ input, select {
   font-size: 16px;
   font-weight: 800;
   background: white;
+}
+
+textarea {
+  min-height: 76px;
+  resize: vertical;
+  font-family: inherit;
 }
 
 .start-btn {
@@ -954,6 +987,32 @@ input, select {
 
 .offline-badge.show { display: block; }
 
+
+@media (max-width: 480px) {
+  .setting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-grid > div {
+    min-width: 0;
+    width: 100%;
+  }
+
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  input[type="date"] {
+    width: 100%;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
 </style>
 </head>
 
@@ -995,17 +1054,31 @@ input, select {
       </div>
 
       <div class="collapse-body">
-        <label>試合日</label>
-        <input id="matchDate" type="date" onchange="markDirty()" />
-
-        <label style="margin-top:12px;">対戦相手</label>
+        <label>対戦相手</label>
         <input id="opponentName" placeholder="例：○○高校" oninput="markDirty()" />
+
+        <div class="setting-grid">
+          <div>
+            <label>試合日</label>
+            <input id="matchDate" type="date" oninput="markDirty()" />
+          </div>
+          <div>
+            <label>大会・試合名</label>
+            <input id="matchTitle" placeholder="例：練習試合" oninput="markDirty()" />
+          </div>
+        </div>
+
+        <label style="margin-top:12px;">会場</label>
+        <input id="matchVenue" placeholder="例：○○体育館" oninput="markDirty()" />
+
+        <label style="margin-top:12px;">メモ</label>
+        <textarea id="matchMemo" placeholder="気づき・テーマなど" oninput="markDirty()"></textarea>
       </div>
     </div>
 
     <div class="collapse open" id="rotationInfoBox">
       <div class="collapse-head" onclick="toggleRotationInfo()">
-        <span>ローテ情報・サーブ権</span>
+        <span>セット設定</span>
         <span id="rotationInfoArrow">▲</span>
       </div>
 
@@ -1421,8 +1494,11 @@ function newMatch() {
   historyView = "current";
   history = [];
 
-  document.getElementById("matchDate").value = getTodayDateString();
   document.getElementById("opponentName").value = "";
+  document.getElementById("matchDate").value = getTodayDateString();
+  document.getElementById("matchTitle").value = "";
+  document.getElementById("matchVenue").value = "";
+  document.getElementById("matchMemo").value = "";
   document.getElementById("startHomeRotation").value = "1";
   document.getElementById("startAwayRotation").value = "-";
   document.getElementById("startServer").value = "home";
@@ -2486,6 +2562,9 @@ function getSetCount(results) {
 function saveMatch(goBack = false) {
   const opponent = document.getElementById("opponentName").value || "未入力";
   const matchDate = document.getElementById("matchDate").value || getTodayDateString();
+  const matchTitle = document.getElementById("matchTitle").value || "";
+  const matchVenue = document.getElementById("matchVenue").value || "";
+  const matchMemo = document.getElementById("matchMemo").value || "";
   const savedSetResults = getCurrentSetResultsForSave();
   const setCount = getSetCount(savedSetResults);
 
@@ -2495,6 +2574,9 @@ function saveMatch(goBack = false) {
     matchDate,
     date: formatMatchDate(matchDate),
     savedAt: new Date().toLocaleString("ja-JP"),
+    matchTitle,
+    matchVenue,
+    matchMemo,
     setNumber,
     setResults: savedSetResults,
     setCount,
@@ -2549,8 +2631,9 @@ function renderMatchList() {
 
     card.innerHTML = `
       <div onclick="openMatch(${match.id})">
-        <div class="match-date">${formatMatchDate(match.matchDate || match.date)}</div>
+        <div class="match-date">${formatMatchDate(match.matchDate || match.date)}${match.matchTitle ? "｜" + match.matchTitle : ""}</div>
         <div class="match-opponent">vs ${match.opponent}</div>
+        ${match.matchVenue ? `<div class="match-date">会場：${match.matchVenue}</div>` : ""}
         <div class="match-score">
           <span class="home-text">${setCount.homeSets}</span>
           <span> - </span>
@@ -2577,8 +2660,11 @@ function openMatch(id) {
   statsView = "current";
   historyView = "current";
 
-  document.getElementById("matchDate").value = match.matchDate || getTodayDateString();
   document.getElementById("opponentName").value = match.opponent;
+  document.getElementById("matchDate").value = match.matchDate || getTodayDateString();
+  document.getElementById("matchTitle").value = match.matchTitle || "";
+  document.getElementById("matchVenue").value = match.matchVenue || "";
+  document.getElementById("matchMemo").value = match.matchMemo || "";
   document.getElementById("startHomeRotation").value = match.homeStartRotation;
   document.getElementById("startAwayRotation").value = match.awayStartRotation;
   document.getElementById("startServer").value = match.startServer;

@@ -1180,7 +1180,7 @@ textarea {
 
       <div class="sub-buttons">
         <button class="sub-btn" onclick="undo()">↩ 1点戻す</button>
-        <button class="sub-btn" onclick="resetCurrentMatch()">↻ リセット</button>
+        <button class="sub-btn" onclick="confirmResetMatch()">↻ リセット</button>
       </div>
     </div>
 
@@ -1695,6 +1695,16 @@ function undo() {
 
   markDirty();
   updateDisplay();
+}
+
+function confirmResetMatch() {
+  const ok = confirm(
+    `SET${setNumber} をリセットしますか？\n\n現在スコア：${homeScore}-${awayScore}\n\nこのセットの得点履歴は消えます。`
+  );
+
+  if (!ok) return;
+
+  resetCurrentMatch();
 }
 
 function resetCurrentMatch(dirty = true) {

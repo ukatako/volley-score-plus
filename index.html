@@ -1025,7 +1025,10 @@ textarea {
 
     <div class="header-sub">
       <h2>試合一覧</h2>
-      <button class="text-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="text-btn" onclick="openSettingsModal()">⚙ 設定</button>
+        <button class="text-btn" id="editBtn" onclick="toggleEditMode()">編集</button>
+      </div>
     </div>
 
     <div id="matchList"></div>
@@ -2737,6 +2740,1140 @@ renderMatchList();
 updateDisplay();
 setStatsMode("point");
 </script>
+
+
+<style>
+/* ===== Report Mode v4 integrated ===== */
+
+.report-open-btn {
+  width: 100%;
+  border: none;
+  background: #111;
+  color: white;
+  border-radius: 12px;
+  padding: 13px 0;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0 0 16px;
+}
+
+.report-screen {
+  background: #eef3ff;
+  min-height: 100vh;
+}
+
+.report-header {
+  background: linear-gradient(135deg, #1557e6, #0b2b7a);
+  color: white;
+  margin: 0 -18px 16px;
+  padding: 18px;
+}
+
+.report-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.report-title-main {
+  font-size: 26px;
+  font-weight: 1000;
+  letter-spacing: 1px;
+}
+
+.report-title-sub {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.report-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.report-action-btn {
+  border: none;
+  background: white;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 8px 11px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.report-page {
+  background: white;
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+}
+
+.report-section {
+  border: 1px solid #d8e3ff;
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fff;
+}
+
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0b3a9e;
+  font-size: 17px;
+  font-weight: 1000;
+  margin-bottom: 10px;
+}
+
+.report-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #1557e6;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 1000;
+}
+
+.report-info-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.report-info-item {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 9px;
+  border-radius: 10px;
+  background: #f6f8ff;
+}
+
+.report-info-label {
+  color: #0b3a9e;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.report-info-value {
+  font-size: 15px;
+  font-weight: 900;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.report-score-main {
+  text-align: center;
+  padding: 8px 0 4px;
+}
+
+.report-teams {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.report-team-name {
+  border-radius: 12px;
+  padding: 10px 6px;
+  font-size: 14px;
+  font-weight: 1000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-team-name.home {
+  background: #1557e6;
+  color: white;
+}
+
+.report-team-name.away {
+  background: #eee;
+  color: #333;
+}
+
+.report-set-count {
+  font-size: 27px;
+  font-weight: 1000;
+  color: #111;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.report-set-scores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.report-set-score {
+  border-radius: 12px;
+  background: #f8f8f8;
+  padding: 9px 4px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.report-set-label {
+  font-size: 12px;
+  color: #1557e6;
+  margin-bottom: 3px;
+}
+
+.report-set-score-num {
+  font-size: 20px;
+}
+
+.report-table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  overflow: hidden;
+  border-radius: 10px;
+}
+
+.report-table th {
+  background: #1557e6;
+  color: white;
+  padding: 8px 4px;
+  border: 1px solid #d8e3ff;
+  white-space: nowrap;
+}
+
+.report-table td {
+  padding: 8px 4px;
+  border: 1px solid #d8e3ff;
+  text-align: center;
+  font-weight: 900;
+}
+
+.report-table td:first-child {
+  text-align: left;
+  color: #0b3a9e;
+}
+
+.report-point-layout {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.report-pie {
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.report-pie::after {
+  content: "";
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+}
+
+.report-pie-center {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  font-weight: 1000;
+  font-size: 12px;
+}
+
+.report-pie-total {
+  font-size: 21px;
+}
+
+.report-legend {
+  display: grid;
+  gap: 7px;
+}
+
+.report-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.report-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.report-rate-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.report-rate-card {
+  border-radius: 14px;
+  background: #f6f8ff;
+  padding: 12px 8px;
+  text-align: center;
+}
+
+.report-rate-team {
+  font-size: 13px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-rate-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.report-rate-box {
+  background: white;
+  border-radius: 12px;
+  padding: 9px 4px;
+}
+
+.report-rate-label {
+  font-size: 12px;
+  color: #555;
+  font-weight: 900;
+}
+
+.report-rate-value {
+  font-size: 25px;
+  font-weight: 1000;
+  color: #1557e6;
+}
+
+.report-rotation-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.report-rotation-card {
+  border-radius: 14px;
+  border: 1px solid #d8e3ff;
+  padding: 10px;
+  background: #fff;
+}
+
+.report-rotation-title {
+  font-weight: 1000;
+  color: #0b3a9e;
+  margin-bottom: 8px;
+}
+
+.report-rotation-row {
+  display: grid;
+  grid-template-columns: 34px 1fr 44px 1fr 44px;
+  gap: 5px;
+  align-items: center;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.report-bar-bg {
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e5e5;
+  overflow: hidden;
+}
+
+.report-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #1557e6;
+}
+
+.report-footer {
+  text-align: center;
+  color: #1557e6;
+  font-size: 12px;
+  font-weight: 900;
+  margin-top: 10px;
+}
+
+.setting-modal-grid {
+  text-align: left;
+  margin: 14px 0;
+}
+
+@media (min-width: 700px) {
+  .report-page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  .report-info-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .report-info-item {
+    grid-template-columns: 1fr;
+  }
+
+  .report-rotation-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .report-team-name {
+    font-size: 16px;
+  }
+
+  .report-set-count {
+    font-size: 32px;
+  }
+
+  .report-teams {
+    grid-template-columns: minmax(0, 1fr) 74px minmax(0, 1fr);
+    gap: 8px;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  .app {
+    max-width: none;
+    background: white;
+  }
+
+  .screen {
+    display: none !important;
+  }
+
+  #reportScreen {
+    display: block !important;
+    padding: 0 !important;
+  }
+
+  .report-header {
+    margin: 0 0 10px;
+    border-radius: 0;
+  }
+
+  .report-actions,
+  .offline-badge {
+    display: none !important;
+  }
+
+  .report-page {
+    box-shadow: none;
+    border-radius: 0;
+    max-width: none;
+  }
+
+  .report-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+</style>
+
+<script>
+/* ===== Report Mode Add-on v4 integrated ===== */
+(function () {
+  const REPORT_COLORS = ["#1557e6", "#43a047", "#fb8c00", "#e91f26", "#8e24aa", "#00acc1"];
+
+  function safeQuery(id) {
+    return document.getElementById(id);
+  }
+
+  function safeValue(id, fallback = "") {
+    const el = safeQuery(id);
+    return el ? el.value || fallback : fallback;
+  }
+
+  function getVolleyPlusSettings() {
+    try {
+      return JSON.parse(localStorage.getItem("volleyPlusSettings")) || { homeTeamName: "HOME" };
+    } catch (e) {
+      return { homeTeamName: "HOME" };
+    }
+  }
+
+  function getHomeTeamName() {
+    const settings = getVolleyPlusSettings();
+    return settings.homeTeamName || "HOME";
+  }
+
+  window.openSettingsModal = function () {
+    const settings = getVolleyPlusSettings();
+    const input = safeQuery("settingHomeTeamName");
+    if (input) input.value = settings.homeTeamName || "HOME";
+    const modal = safeQuery("settingsModal");
+    if (modal) modal.style.display = "flex";
+  };
+
+  window.closeSettingsModal = function () {
+    const modal = safeQuery("settingsModal");
+    if (modal) modal.style.display = "none";
+  };
+
+  window.saveSettingsModal = function () {
+    const homeTeamName = safeValue("settingHomeTeamName", "HOME").trim() || "HOME";
+    localStorage.setItem("volleyPlusSettings", JSON.stringify({ homeTeamName }));
+    window.closeSettingsModal();
+    alert("設定を保存しました");
+  };
+
+  function placeReportButtonUnderStats() {
+    const statsBox = safeQuery("statsBox");
+    if (!statsBox) return;
+
+    let btn = safeQuery("reportOpenBtn");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.id = "reportOpenBtn";
+      btn.className = "report-open-btn";
+      btn.type = "button";
+      btn.textContent = "📄 レポートモード";
+      btn.onclick = window.openReportMode;
+    }
+
+    statsBox.insertAdjacentElement("afterend", btn);
+  }
+
+  window.openReportMode = function () {
+    if (typeof saveMatch === "function") {
+      try { saveMatch(false); } catch (e) {}
+    }
+
+    renderReport();
+
+    if (typeof showScreen === "function") {
+      showScreen("reportScreen");
+    } else {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const reportScreen = safeQuery("reportScreen");
+      if (reportScreen) reportScreen.classList.add("active");
+    }
+
+    window.scrollTo(0, 0);
+  };
+
+  window.closeReportMode = function () {
+    if (typeof showScreen === "function") {
+      showScreen("scoreScreen");
+    } else {
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      const scoreScreen = safeQuery("scoreScreen");
+      if (scoreScreen) scoreScreen.classList.add("active");
+    }
+
+    window.scrollTo(0, 0);
+  };
+
+  window.printReport = function () {
+    window.print();
+  };
+
+  function reportFormatDate(value) {
+    if (!value) return "未入力";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const [y, m, d] = value.split("-");
+      return `${y}/${Number(m)}/${Number(d)}`;
+    }
+    return value;
+  }
+
+  function getItemSetNumber(item) {
+    return Number(item.setNumber ?? item.setNo ?? item.set ?? item.currentSet ?? item.setIndex ?? 1);
+  }
+
+  function getCurrentHistory() {
+    try {
+      if (typeof history !== "undefined" && Array.isArray(history)) return history;
+    } catch (e) {}
+    return [];
+  }
+
+  function getReportSetResults() {
+    try {
+      if (typeof getCurrentSetResultsForSave === "function") {
+        const r = getCurrentSetResultsForSave();
+        if (Array.isArray(r)) return r;
+      }
+    } catch (e) {}
+
+    try {
+      if (typeof setResults !== "undefined" && Array.isArray(setResults) && setResults.length) {
+        return setResults;
+      }
+    } catch (e) {}
+
+    const items = getCurrentHistory();
+    const setMap = {};
+
+    items.forEach(item => {
+      const setNo = getItemSetNumber(item);
+      if (!setNo) return;
+      if (!setMap[setNo]) setMap[setNo] = { setNumber: setNo, homeScore: 0, awayScore: 0 };
+      const scoredTeam = getItemScoredTeam(item);
+      if (scoredTeam === "home") setMap[setNo].homeScore++;
+      if (scoredTeam === "away") setMap[setNo].awayScore++;
+    });
+
+    return Object.values(setMap).map(s => ({
+      ...s,
+      winner: s.homeScore > s.awayScore ? "home" : s.awayScore > s.homeScore ? "away" : "draw"
+    })).sort((a, b) => a.setNumber - b.setNumber);
+  }
+
+  function getReportSetCount(results) {
+    try {
+      if (typeof getSetCount === "function") return getSetCount(results);
+    } catch (e) {}
+
+    let homeSets = 0;
+    let awaySets = 0;
+
+    results.forEach(s => {
+      if (s.winner === "home") homeSets++;
+      else if (s.winner === "away") awaySets++;
+      else if (Number(s.homeScore) > Number(s.awayScore)) homeSets++;
+      else if (Number(s.awayScore) > Number(s.homeScore)) awaySets++;
+    });
+
+    return { homeSets, awaySets };
+  }
+
+  function getItemsBySet(setNo) {
+    return getCurrentHistory().filter(item => getItemSetNumber(item) === Number(setNo));
+  }
+
+  function getAllReportItems() {
+    return getCurrentHistory();
+  }
+
+  function getItemScoredTeam(item) {
+    const v = item.scoredTeam ?? item.pointTeam ?? item.team ?? item.scorer ?? item.winner ?? item.side ?? item.addedTeam ?? "";
+    if (v === "H" || v === "homeTeam" || v === "HOME" || v === "自チーム") return "home";
+    if (v === "A" || v === "awayTeam" || v === "AWAY" || v === "相手") return "away";
+    return v;
+  }
+
+  function getItemReason(item) {
+    return item.reason ?? item.scoringReason ?? item.pointReason ?? item.scoreReason ?? item.reasonType ?? item.type ?? item.cause ?? item.label ?? "";
+  }
+
+  function getItemServer(item) {
+    const v = item.beforeServer ?? item.server ?? item.servingTeam ?? item.serveTeam ?? item.currentServer ?? item.serverTeam ?? "";
+    if (v === "H" || v === "homeTeam" || v === "HOME" || v === "自チーム") return "home";
+    if (v === "A" || v === "awayTeam" || v === "AWAY" || v === "相手") return "away";
+    return v;
+  }
+
+  function getHomeRotation(item) {
+    return item.beforeHomeRotation ?? item.homeRotation ?? item.homeRot ?? item.homeRotationBefore ?? item.rotationHome ?? "-";
+  }
+
+  function getAwayRotation(item) {
+    return item.beforeAwayRotation ?? item.awayRotation ?? item.awayRot ?? item.awayRotationBefore ?? item.rotationAway ?? "-";
+  }
+
+  function getRotationOrder() {
+    try {
+      if (typeof rotationOrder !== "undefined" && Array.isArray(rotationOrder)) return rotationOrder;
+    } catch (e) {}
+    return [1, 2, 3, 4, 5, 6];
+  }
+
+  function normalizeRotation(rot) {
+    if (rot === undefined || rot === null) return "-";
+    const s = String(rot).trim();
+
+    if (s === "-") return "-";
+
+    const order = getRotationOrder();
+    const wantsNumberKey = order.some(v => typeof v === "number" || /^[1-6]$/.test(String(v)));
+
+    let n = null;
+
+    if (/^[RS][1-6]$/i.test(s)) {
+      n = Number(s.replace(/[RS]/i, ""));
+    } else if (/^[1-6]$/.test(s)) {
+      n = Number(s);
+    } else {
+      const found = s.match(/[1-6]/);
+      if (found) n = Number(found[0]);
+    }
+
+    if (n) return wantsNumberKey ? n : `R${n}`;
+    return s;
+  }
+
+  function rotationLabel(rot) {
+    try {
+      if (typeof rotationMap !== "undefined" && rotationMap && rotationMap[rot]) return rotationMap[rot];
+    } catch (e) {}
+    if (/^[1-6]$/.test(String(rot))) {
+      const labels = {1:"S1",2:"S6",3:"S5",4:"S4",5:"S3",6:"S2"};
+      return labels[rot] || `S${rot}`;
+    }
+    return rot;
+  }
+
+  function getReasonDisplayName(reason, scoredTeam) {
+    const r = String(reason || "").trim();
+    if (!r) return "不明";
+
+    try {
+      if (typeof scoringReasons !== "undefined" && scoringReasons.includes(r)) return r;
+      if (typeof mistakeReasons !== "undefined" && mistakeReasons.includes(r)) {
+        return scoredTeam === "home" ? `相手${r.replace("失点", "ミス")}` : `自チーム${r.replace("失点", "ミス")}`;
+      }
+    } catch (e) {}
+
+    if (r.includes("失点")) {
+      return scoredTeam === "home" ? `相手${r.replace("失点", "ミス")}` : `自チーム${r.replace("失点", "ミス")}`;
+    }
+
+    return r;
+  }
+
+  function calculateHomePointReasonStats(items) {
+    const result = {};
+
+    items.forEach(item => {
+      const scoredTeam = getItemScoredTeam(item);
+      if (scoredTeam !== "home") return;
+
+      const label = getReasonDisplayName(getItemReason(item), "home");
+      result[label] = (result[label] || 0) + 1;
+    });
+
+    return result;
+  }
+
+  function calculateHomeReasonStatsBySet(setNumbers) {
+    const reasonSet = new Set();
+
+    setNumbers.forEach(setNo => {
+      const stats = calculateHomePointReasonStats(getItemsBySet(setNo));
+      Object.keys(stats).forEach(reason => reasonSet.add(reason));
+    });
+
+    const totalStats = calculateHomePointReasonStats(getAllReportItems());
+    Object.keys(totalStats).forEach(reason => reasonSet.add(reason));
+
+    return {
+      reasons: Array.from(reasonSet),
+      totalStats
+    };
+  }
+
+  function makePieStyle(stats) {
+    const entries = Object.entries(stats).filter(([, value]) => value > 0);
+    const total = entries.reduce((sum, [, value]) => sum + value, 0);
+
+    if (!total) return "background:#e5e5e5;";
+
+    let current = 0;
+    const parts = entries.map(([label, value], index) => {
+      const start = current;
+      const end = current + (value / total) * 100;
+      current = end;
+      const color = REPORT_COLORS[index % REPORT_COLORS.length];
+      return `${color} ${start}% ${end}%`;
+    });
+
+    return `background: conic-gradient(${parts.join(", ")});`;
+  }
+
+  function reportPercent(value, total) {
+    if (!total) return 0;
+    return Math.round((value / total) * 100);
+  }
+
+  function renderPointReasonReport(setNumbers) {
+    if (!setNumbers.length) {
+      setNumbers = Array.from(new Set(getAllReportItems().map(getItemSetNumber).filter(Boolean))).sort((a, b) => a - b);
+    }
+
+    const { reasons, totalStats } = calculateHomeReasonStatsBySet(setNumbers);
+    const total = Object.values(totalStats).reduce((sum, value) => sum + value, 0);
+
+    if (!total) {
+      return `
+        <div class="report-section">
+          <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+          <div style="font-weight:900; color:#666;">まだ得点理由データがありません。</div>
+        </div>
+      `;
+    }
+
+    let tableRows = "";
+
+    reasons.forEach(reason => {
+      const setCells = setNumbers.map(setNo => {
+        const stats = calculateHomePointReasonStats(getItemsBySet(setNo));
+        return `<td>${stats[reason] || 0}</td>`;
+      }).join("");
+
+      tableRows += `
+        <tr>
+          <td>${reason}</td>
+          ${setCells}
+          <td>${totalStats[reason] || 0}</td>
+        </tr>
+      `;
+    });
+
+    const legend = Object.entries(totalStats)
+      .filter(([, value]) => value > 0)
+      .map(([reason, value], index) => {
+        const color = REPORT_COLORS[index % REPORT_COLORS.length];
+        return `
+          <div class="report-legend-row">
+            <span class="report-dot" style="background:${color};"></span>
+            <span>${reason}</span>
+            <span>${value}点（${reportPercent(value, total)}%）</span>
+          </div>
+        `;
+      }).join("");
+
+    return `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+
+        <div class="report-table-wrap">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th>得点理由</th>
+                ${setNumbers.map(n => `<th>SET${n}</th>`).join("")}
+                <th>TOTAL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-point-layout">
+          <div class="report-pie" style="${makePieStyle(totalStats)}">
+            <div class="report-pie-center">
+              TOTAL
+              <div class="report-pie-total">${total}</div>
+              得点
+            </div>
+          </div>
+
+          <div class="report-legend">
+            ${legend}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function calculateStatsForTeam(items, team) {
+    const base = { soSuccess: 0, soChance: 0, bkSuccess: 0, bkChance: 0 };
+    const order = getRotationOrder();
+    const byRotation = {};
+    order.forEach(rot => byRotation[rot] = { ...base });
+
+    const total = { ...base };
+
+    items.forEach(item => {
+      const scoredTeam = getItemScoredTeam(item);
+      const isPoint = scoredTeam === team;
+      const server = getItemServer(item);
+      const targetRotation = normalizeRotation(team === "home" ? getHomeRotation(item) : getAwayRotation(item));
+
+      if (!server) return;
+
+      if (server !== team) {
+        total.soChance++;
+        if (isPoint) total.soSuccess++;
+      }
+
+      if (server === team) {
+        total.bkChance++;
+        if (isPoint) total.bkSuccess++;
+      }
+
+      if (targetRotation !== "-" && byRotation[targetRotation]) {
+        const r = byRotation[targetRotation];
+
+        if (server !== team) {
+          r.soChance++;
+          if (isPoint) r.soSuccess++;
+        }
+
+        if (server === team) {
+          r.bkChance++;
+          if (isPoint) r.bkSuccess++;
+        }
+      }
+    });
+
+    return { total, byRotation };
+  }
+
+  function pct(success, chance) {
+    if (!chance) return 0;
+    return Math.ceil((success / chance) * 100);
+  }
+
+  function renderRotationRows(stats) {
+    return getRotationOrder().map(rot => {
+      const r = stats.byRotation[rot] || { soSuccess: 0, soChance: 0, bkSuccess: 0, bkChance: 0 };
+      const so = pct(r.soSuccess, r.soChance);
+      const bk = pct(r.bkSuccess, r.bkChance);
+
+      return `
+        <div class="report-rotation-row">
+          <div>${rotationLabel(rot)}</div>
+
+          <div class="report-bar-bg">
+            <div class="report-bar-fill" style="width:${so}%;"></div>
+          </div>
+          <div>${so}%</div>
+
+          <div class="report-bar-bg">
+            <div class="report-bar-fill" style="width:${bk}%; background:#43a047;"></div>
+          </div>
+          <div>${bk}%</div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function renderSideoutBreakReport(homeName, awayName) {
+    const items = getAllReportItems();
+    const homeStats = calculateStatsForTeam(items, "home");
+    const awayStats = calculateStatsForTeam(items, "away");
+
+    const homeSO = pct(homeStats.total.soSuccess, homeStats.total.soChance);
+    const homeBK = pct(homeStats.total.bkSuccess, homeStats.total.bkChance);
+    const awaySO = pct(awayStats.total.soSuccess, awayStats.total.soChance);
+    const awayBK = pct(awayStats.total.bkSuccess, awayStats.total.bkChance);
+
+    return `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">4</span>サイドアウト率・ブレイク率</div>
+
+        <div class="report-rate-main">
+          <div class="report-rate-card">
+            <div class="report-rate-team home-text">${homeName}</div>
+            <div class="report-rate-row">
+              <div class="report-rate-box">
+                <div class="report-rate-label">SO率</div>
+                <div class="report-rate-value">${homeSO}%</div>
+              </div>
+              <div class="report-rate-box">
+                <div class="report-rate-label">BK率</div>
+                <div class="report-rate-value" style="color:#43a047;">${homeBK}%</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="report-rate-card">
+            <div class="report-rate-team away-text">${awayName}</div>
+            <div class="report-rate-row">
+              <div class="report-rate-box">
+                <div class="report-rate-label">SO率</div>
+                <div class="report-rate-value">${awaySO}%</div>
+              </div>
+              <div class="report-rate-box">
+                <div class="report-rate-label">BK率</div>
+                <div class="report-rate-value" style="color:#43a047;">${awayBK}%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-rotation-layout">
+          <div class="report-rotation-card">
+            <div class="report-rotation-title">${homeName} ローテ別</div>
+            <div class="report-rotation-row" style="color:#666;">
+              <div></div><div>SO</div><div></div><div>BK</div><div></div>
+            </div>
+            ${renderRotationRows(homeStats)}
+          </div>
+
+          <div class="report-rotation-card">
+            <div class="report-rotation-title">${awayName} ローテ別</div>
+            <div class="report-rotation-row" style="color:#666;">
+              <div></div><div>SO</div><div></div><div>BK</div><div></div>
+            </div>
+            ${renderRotationRows(awayStats)}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderReport() {
+    const homeName = getHomeTeamName();
+    const awayName = safeValue("opponentName", "AWAY") || "AWAY";
+
+    const matchDate = safeValue("matchDate", "");
+    const matchTitle = safeValue("matchTitle", "未入力") || "未入力";
+    const matchVenue = safeValue("matchVenue", "未入力") || "未入力";
+
+    const results = getReportSetResults();
+    const setCount = getReportSetCount(results);
+    const setNumbers = results.map(s => Number(s.setNumber)).filter(Boolean).sort((a, b) => a - b);
+
+    const setScoreHtml = results.map(s => {
+      const homeScore = Number(s.homeScore) || 0;
+      const awayScore = Number(s.awayScore) || 0;
+      const homeCls = homeScore > awayScore ? "home-text" : "";
+      const awayCls = awayScore > homeScore ? "away-text" : "";
+
+      return `
+        <div class="report-set-score">
+          <div class="report-set-label">第${s.setNumber}セット</div>
+          <div class="report-set-score-num">
+            <span class="${homeCls}">${homeScore}</span>
+            -
+            <span class="${awayCls}">${awayScore}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    const reportContent = safeQuery("reportContent");
+    if (!reportContent) {
+      alert("レポート表示エリアが見つかりません。");
+      return;
+    }
+
+    reportContent.innerHTML = `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">1</span>試合情報</div>
+        <div class="report-info-grid">
+          <div class="report-info-item">
+            <div class="report-info-label">日付</div>
+            <div class="report-info-value">${reportFormatDate(matchDate)}</div>
+          </div>
+          <div class="report-info-item">
+            <div class="report-info-label">大会名</div>
+            <div class="report-info-value">${matchTitle}</div>
+          </div>
+          <div class="report-info-item">
+            <div class="report-info-label">会場</div>
+            <div class="report-info-value">${matchVenue}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">2</span>試合結果</div>
+        <div class="report-score-main">
+          <div class="report-teams">
+            <div class="report-team-name home">${homeName}</div>
+            <div class="report-set-count">
+              <span class="home-text">${setCount.homeSets}</span>-<span class="away-text">${setCount.awaySets}</span>
+            </div>
+            <div class="report-team-name away">${awayName}</div>
+          </div>
+
+          <div class="report-set-scores">
+            ${setScoreHtml || `<div style="font-weight:900; color:#666;">セット結果がありません</div>`}
+          </div>
+        </div>
+      </div>
+
+      ${renderPointReasonReport(setNumbers)}
+
+      ${renderSideoutBreakReport(homeName, awayName)}
+    `;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!safeQuery("reportScreen")) {
+      const app = document.querySelector(".app") || document.body;
+      const div = document.createElement("div");
+      div.id = "reportScreen";
+      div.className = "screen report-screen";
+      div.innerHTML = `
+        <div class="report-header">
+          <div class="report-header-row">
+            <div>
+              <div class="report-title-main">MATCH REPORT</div>
+              <div class="report-title-sub">Volley Score Plus 試合レポート</div>
+            </div>
+            <div class="report-actions">
+              <button class="report-action-btn" onclick="closeReportMode()">戻る</button>
+              <button class="report-action-btn" onclick="printReport()">PDF保存</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-page" id="reportPage">
+          <div id="reportContent"></div>
+          <div class="report-footer">Powered by Volley Score Plus</div>
+        </div>
+      `;
+      app.appendChild(div);
+    }
+
+    if (!safeQuery("settingsModal")) {
+      const div = document.createElement("div");
+      div.className = "modal-bg";
+      div.id = "settingsModal";
+      div.innerHTML = `
+        <div class="modal">
+          <div class="modal-title">アプリ設定</div>
+          <div class="modal-text">レポートに表示する自チーム名を設定します</div>
+
+          <div class="setting-modal-grid">
+            <label>HOMEチーム名</label>
+            <input id="settingHomeTeamName" placeholder="例：QUEENSEIS" />
+          </div>
+
+          <button class="primary-btn" onclick="saveSettingsModal()">保存する</button>
+          <button class="cancel-btn" onclick="closeSettingsModal()">キャンセル</button>
+        </div>
+      `;
+      document.body.appendChild(div);
+    }
+
+    placeReportButtonUnderStats();
+  });
+})();
+</script>
+
 
 </body>
 </html>

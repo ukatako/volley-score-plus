@@ -3956,9 +3956,7 @@ setStatsMode("point");
     window.scrollTo(0, 0);
   };
 
-  window.printReport = function () {
-    renderReport();
-    const oldTitle = document.title;
+  function getReportPdfTitle() {
     try {
       const match = {
         matchDate: safeValue("matchDate", getTodayDateString()),
@@ -3966,13 +3964,33 @@ setStatsMode("point");
         id: currentMatchId || Date.now()
       };
       if (typeof getSingleMatchFileName === "function") {
-        document.title = getSingleMatchFileName(match, "pdf").replace(/\.pdf$/, "");
+        return getSingleMatchFileName(match, "pdf").replace(/\.pdf$/, "");
       }
     } catch (e) {}
+    return "Volley_Score_Plus_Report";
+  }
 
-    window.print();
+  window.printReport = function () {
+    renderReport();
 
-    setTimeout(() => { document.title = oldTitle; }, 500);
+    const oldTitle = document.title;
+    document.title = getReportPdfTitle();
+
+    // スマホChromeでは、DOM更新直後の window.print() が無反応になることがあるため、
+    // ボタン押下イベント内で少しだけ遅延させてから印刷ダイアログを開く。
+    setTimeout(() => {
+      try {
+        if (typeof window.print === "function") {
+          window.print();
+        } else {
+          alert("このブラウザではPDF保存に対応していません。ChromeまたはSafariの共有メニューから印刷/PDF保存をお試しください。");
+        }
+      } catch (e) {
+        alert("PDF保存を開けませんでした。ブラウザのメニューから『共有』→『印刷』または『PDF保存』をお試しください。");
+      }
+
+      setTimeout(() => { document.title = oldTitle; }, 1200);
+    }, 80);
   };
 
   function reportFormatDate(value) {
@@ -4535,8 +4553,8 @@ setStatsMode("point");
               <div class="report-title-sub">Volley Score Plus 試合レポート</div>
             </div>
             <div class="report-actions">
-              <button class="report-action-btn" onclick="closeReportMode()">戻る</button>
-              <button class="report-action-btn" onclick="printReport()">PDF保存</button>
+              <button class="report-action-btn" type="button" onclick="closeReportMode()">戻る</button>
+              <button class="report-action-btn" type="button" onclick="printReport()">PDF保存</button>
             </div>
           </div>
         </div>

@@ -201,6 +201,100 @@ body {
 
 .edit-mode .delete-btn { display: block; }
 
+
+
+.transfer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.transfer-btn {
+  border: none;
+  background: #eef3ff;
+  color: #1557e6;
+  border-radius: 12px;
+  padding: 12px 10px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.transfer-btn.secondary {
+  background: #f1f1f1;
+  color: #222;
+}
+
+.export-match-btn {
+  border: none;
+  background: #eef3ff;
+  color: #1557e6;
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.match-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.share-check-wrap {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #eef3ff;
+}
+
+.share-check {
+  width: 24px;
+  height: 24px;
+  accent-color: #1557e6;
+}
+
+.share-select-mode .share-check-wrap { display: flex; }
+.share-select-mode .export-match-btn,
+.share-select-mode .delete-btn { display: none; }
+.edit-mode .share-check-wrap,
+.edit-mode .export-match-btn { display: none; }
+
+.selection-actions {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: -4px 0 14px;
+}
+
+.selection-actions.show { display: grid; }
+
+.selection-count,
+.selection-export-btn {
+  grid-column: 1 / -1;
+}
+
+.selection-count {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #1557e6;
+  padding: 4px 0;
+}
+
+.selection-count {
+  grid-column: 1 / 3;
+  color: #555;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
 .new-btn {
   position: sticky;
   bottom: 14px;
@@ -1031,6 +1125,18 @@ textarea {
       </div>
     </div>
 
+    <div class="transfer-actions">
+      <button class="transfer-btn" id="shareSelectModeBtn" onclick="toggleShareSelectMode()">☑ 選択共有</button>
+      <button class="transfer-btn secondary" onclick="openImportFile()">📥 読み込み</button>
+    </div>
+    <div class="selection-actions" id="selectionActions">
+      <div class="selection-count" id="selectionCount">0試合選択中</div>
+      <button class="transfer-btn secondary" onclick="selectAllMatchesForShare()">全選択</button>
+      <button class="transfer-btn secondary" onclick="clearSelectedMatches()">選択解除</button>
+      <button class="transfer-btn selection-export-btn" onclick="exportSelectedMatches()">📤 選択した試合を書き出し</button>
+    </div>
+    <input id="importFileInput" type="file" accept="application/json,.json" style="display:none;" onchange="importMatchesFromFile(event)" />
+
     <div id="matchList"></div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
   </div>
@@ -1299,6 +1405,8 @@ textarea {
 <script>
 let matches = JSON.parse(localStorage.getItem("volleyMatchesPlus")) || [];
 let editMode = false;
+let shareSelectMode = false;
+let selectedMatchIds = new Set();
 let deleteTargetId = null;
 let currentMatchId = null;
 let isDirty = false;
@@ -1543,7 +1651,12 @@ function closeUnsavedModal() {
 
 function toggleEditMode() {
   editMode = !editMode;
+  if (editMode && shareSelectMode) {
+    shareSelectMode = false;
+    selectedMatchIds.clear();
+  }
   document.getElementById("editBtn").textContent = editMode ? "完了" : "編集";
+  updateShareSelectionUI();
   renderMatchList();
 }
 
@@ -2622,8 +2735,8 @@ function renderMatchList() {
   const list = document.getElementById("matchList");
   list.innerHTML = "";
 
-  if (editMode) list.classList.add("edit-mode");
-  else list.classList.remove("edit-mode");
+  list.classList.toggle("edit-mode", editMode);
+  list.classList.toggle("share-select-mode", shareSelectMode);
 
   if (matches.length === 0) {
     list.innerHTML = `<p style="color:#666; font-weight:700;">まだ試合がありません。</p>`;
@@ -2643,7 +2756,7 @@ function renderMatchList() {
     }).join("");
 
     card.innerHTML = `
-      <div onclick="openMatch(${match.id})">
+      <div onclick="handleMatchCardClick(${match.id})">
         <div class="match-date">${formatMatchDate(match.matchDate || match.date)}${match.matchTitle ? "｜" + match.matchTitle : ""}</div>
         <div class="match-opponent">vs ${match.opponent}</div>
         ${match.matchVenue ? `<div class="match-date">会場：${match.matchVenue}</div>` : ""}
@@ -2654,11 +2767,73 @@ function renderMatchList() {
         </div>
         <div class="set-list">${setPills}</div>
       </div>
-      <button class="delete-btn" onclick="openDeleteModal(${match.id})">🗑</button>
+      <div class="match-actions">
+        <label class="share-check-wrap" onclick="event.stopPropagation()">
+          <input class="share-check" type="checkbox" ${selectedMatchIds.has(match.id) ? "checked" : ""} onchange="toggleMatchSelection(event, ${match.id})" />
+        </label>
+        <button class="export-match-btn" onclick="exportSingleMatch(event, ${match.id})">📤 書き出し</button>
+        <button class="delete-btn" onclick="openDeleteModal(${match.id})">🗑</button>
+      </div>
     `;
 
     list.appendChild(card);
   });
+}
+
+function updateShareSelectionUI() {
+  const btn = document.getElementById("shareSelectModeBtn");
+  const actions = document.getElementById("selectionActions");
+  const count = document.getElementById("selectionCount");
+
+  if (btn) btn.textContent = shareSelectMode ? "完了" : "☑ 選択共有";
+  if (actions) actions.classList.toggle("show", shareSelectMode);
+  if (count) count.textContent = `${selectedMatchIds.size}試合選択中`;
+}
+
+function toggleShareSelectMode() {
+  shareSelectMode = !shareSelectMode;
+  if (shareSelectMode && editMode) {
+    editMode = false;
+    const editBtn = document.getElementById("editBtn");
+    if (editBtn) editBtn.textContent = "編集";
+  }
+  if (!shareSelectMode) selectedMatchIds.clear();
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function handleMatchCardClick(id) {
+  if (shareSelectMode) {
+    toggleMatchSelectedById(id);
+    renderMatchList();
+    return;
+  }
+  openMatch(id);
+}
+
+function toggleMatchSelectedById(id) {
+  if (selectedMatchIds.has(id)) selectedMatchIds.delete(id);
+  else selectedMatchIds.add(id);
+  updateShareSelectionUI();
+}
+
+function toggleMatchSelection(event, id) {
+  event.stopPropagation();
+  if (event.target.checked) selectedMatchIds.add(id);
+  else selectedMatchIds.delete(id);
+  updateShareSelectionUI();
+}
+
+function selectAllMatchesForShare() {
+  selectedMatchIds = new Set(matches.map(m => m.id));
+  updateShareSelectionUI();
+  renderMatchList();
+}
+
+function clearSelectedMatches() {
+  selectedMatchIds.clear();
+  updateShareSelectionUI();
+  renderMatchList();
 }
 
 function openMatch(id) {
@@ -2714,12 +2889,218 @@ function openDeleteModal(id) {
   document.getElementById("deleteModal").style.display = "flex";
 }
 
+
+function createExportPayload(targetMatches, exportType = "matches") {
+  return {
+    app: "Volley Score Plus",
+    version: 2,
+    exportType,
+    exportedAt: new Date().toISOString(),
+    matches: targetMatches
+  };
+}
+
+function getPlusSettingsForExport() {
+  try {
+    return JSON.parse(localStorage.getItem("volleyPlusSettings")) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function getExportHomeName() {
+  const settings = getPlusSettingsForExport();
+  return (settings.homeTeamName || "HOME").trim() || "HOME";
+}
+
+function sanitizeFileName(text, fallback = "match") {
+  return String(text || fallback)
+    .replace(/[\\/:*?"<>|]+/g, "")
+    .replace(/[\s　]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || fallback;
+}
+
+function yymmddFromDate(dateString) {
+  const value = dateString || getTodayDateString();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value.slice(2, 4) + value.slice(5, 7) + value.slice(8, 10);
+  }
+
+  const d = new Date(value);
+  if (!Number.isNaN(d.getTime())) {
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}${mm}${dd}`;
+  }
+
+  return yymmddFromDate(getTodayDateString());
+}
+
+function getMatchExportBaseName(match) {
+  const datePart = yymmddFromDate(match && (match.matchDate || match.date));
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+  const awayName = sanitizeFileName(match && match.opponent, "AWAY");
+  return `${datePart}_${homeName}_vs_${awayName}`;
+}
+
+function getMatchExportSequence(match) {
+  const base = getMatchExportBaseName(match);
+  const sameCard = matches
+    .filter(m => getMatchExportBaseName(m) === base)
+    .slice()
+    .sort((a, b) => (a.id || 0) - (b.id || 0));
+
+  const index = sameCard.findIndex(m => m.id === match.id);
+  return String(index >= 0 ? index + 1 : sameCard.length + 1).padStart(2, "0");
+}
+
+function getSingleMatchFileName(match, ext = "json") {
+  return `${getMatchExportBaseName(match)}_${getMatchExportSequence(match)}.${ext}`;
+}
+
+function getSelectedMatchesFileName(selectedMatches, ext = "json") {
+  if (selectedMatches.length === 1) return getSingleMatchFileName(selectedMatches[0], ext);
+
+  const bases = Array.from(new Set(selectedMatches.map(getMatchExportBaseName)));
+  const dates = Array.from(new Set(selectedMatches.map(m => yymmddFromDate(m.matchDate || m.date))));
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+
+  if (bases.length === 1) {
+    return `${bases[0]}_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+  }
+
+  if (dates.length === 1) {
+    return `${dates[0]}_${homeName}_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+  }
+
+  return `volley_score_plus_selected_${String(selectedMatches.length).padStart(2, "0")}matches.${ext}`;
+}
+
+function downloadJsonFile(data, fileName) {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAllMatches() {
+  if (!matches.length) {
+    alert("書き出す試合データがありません");
+    return;
+  }
+
+  const ok = confirm(`保存済みの全${matches.length}試合を書き出しますか？`);
+  if (!ok) return;
+
+  const payload = createExportPayload(matches, "all");
+  const today = yymmddFromDate(getTodayDateString());
+  const homeName = sanitizeFileName(getExportHomeName(), "HOME");
+  downloadJsonFile(payload, `${today}_${homeName}_all_${String(matches.length).padStart(2, "0")}matches.json`);
+}
+
+function exportSelectedMatches() {
+  const selectedMatches = matches.filter(m => selectedMatchIds.has(m.id));
+
+  if (!selectedMatches.length) {
+    alert("共有する試合を選択してください");
+    return;
+  }
+
+  const ok = confirm(`${selectedMatches.length}試合を書き出しますか？`);
+  if (!ok) return;
+
+  const payload = createExportPayload(selectedMatches, selectedMatches.length === 1 ? "single" : "selected");
+  downloadJsonFile(payload, getSelectedMatchesFileName(selectedMatches));
+}
+
+function exportSingleMatch(event, id) {
+  if (event) event.stopPropagation();
+
+  const match = matches.find(m => m.id === id);
+  if (!match) return;
+
+  const payload = createExportPayload([match], "single");
+  downloadJsonFile(payload, getSingleMatchFileName(match));
+}
+
+function openImportFile() {
+  const input = document.getElementById("importFileInput");
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
+
+function normalizeImportedMatches(importedData) {
+  if (Array.isArray(importedData)) return importedData;
+  if (importedData && Array.isArray(importedData.matches)) return importedData.matches;
+  if (importedData && importedData.history) return [importedData];
+  return [];
+}
+
+function makeImportedMatchCopy(match) {
+  const oldId = match.id || Date.now();
+  const newId = Date.now() + Math.floor(Math.random() * 1000000);
+  return {
+    ...match,
+    id: newId,
+    importedAt: new Date().toLocaleString("ja-JP"),
+    originalId: oldId,
+    savedAt: match.savedAt || new Date().toLocaleString("ja-JP"),
+    setResults: match.setResults || [],
+    setCount: match.setCount || getSetCount(match.setResults || []),
+    history: match.history || []
+  };
+}
+
+function importMatchesFromFile(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+    try {
+      const importedData = JSON.parse(e.target.result);
+      const importedMatches = normalizeImportedMatches(importedData);
+
+      if (!importedMatches.length) {
+        alert("読み込める試合データが見つかりませんでした");
+        return;
+      }
+
+      const ok = confirm(`${importedMatches.length}試合を読み込みますか？\n※現在の試合一覧には追加され、既存データは消えません。`);
+      if (!ok) return;
+
+      const copiedMatches = importedMatches.map(makeImportedMatchCopy);
+      matches = [...copiedMatches, ...matches];
+      localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
+      renderMatchList();
+      alert(`${copiedMatches.length}試合を読み込みました`);
+    } catch (error) {
+      console.error(error);
+      alert("読み込みに失敗しました。Volley Score Plusで書き出したJSONファイルを選んでください。");
+    }
+  };
+
+  reader.readAsText(file);
+}
+
 function closeDeleteModal() {
   deleteTargetId = null;
   document.getElementById("deleteModal").style.display = "none";
 }
 
 function confirmDelete() {
+  selectedMatchIds.delete(deleteTargetId);
   matches = matches.filter(m => m.id !== deleteTargetId);
   localStorage.setItem("volleyMatchesPlus", JSON.stringify(matches));
   closeDeleteModal();
@@ -2987,6 +3368,25 @@ setStatsMode("point");
   margin-top: 12px;
 }
 
+
+.report-team-point-block {
+  border: 1px solid #d8e3ff;
+  border-radius: 12px;
+  padding: 10px;
+  margin-top: 10px;
+  background: #fbfcff;
+}
+
+.report-team-point-title {
+  font-size: 14px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+}
+
+.report-team-point-block.away {
+  background: #fffafa;
+}
+
 .report-pie {
   width: 124px;
   height: 124px;
@@ -3245,37 +3645,24 @@ setStatsMode("point");
 
   #reportContent {
     display: grid !important;
-    grid-template-columns: 0.9fr 1.1fr !important;
-    grid-template-rows: auto auto auto !important;
-    gap: 3mm !important;
-    align-items: start !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto auto auto !important;
+    gap: 4mm !important;
+    align-items: stretch !important;
   }
 
-  #reportContent .report-section:nth-child(1) {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-  }
-
-  #reportContent .report-section:nth-child(2) {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-  }
-
-  #reportContent .report-section:nth-child(3) {
-    grid-column: 2 !important;
-    grid-row: 1 / span 2 !important;
-  }
-
+  #reportContent .report-section:nth-child(1),
+  #reportContent .report-section:nth-child(2),
+  #reportContent .report-section:nth-child(3),
   #reportContent .report-section:nth-child(4) {
-    grid-column: 1 / 3 !important;
-    grid-row: 3 !important;
+    grid-column: 1 !important;
   }
 
   .report-section {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    border-radius: 8px !important;
-    padding: 5px !important;
+    border-radius: 9px !important;
+    padding: 7px !important;
     margin: 0 !important;
   }
 
@@ -3293,14 +3680,15 @@ setStatsMode("point");
   }
 
   .report-info-grid {
-    gap: 4px !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 5px !important;
   }
 
   .report-info-item {
-    grid-template-columns: 40px 1fr !important;
-    gap: 4px !important;
-    padding: 4px !important;
-    border-radius: 6px !important;
+    grid-template-columns: 46px 1fr !important;
+    gap: 5px !important;
+    padding: 6px !important;
+    border-radius: 7px !important;
   }
 
   .report-info-label {
@@ -3350,28 +3738,40 @@ setStatsMode("point");
   }
 
   .report-table {
-    font-size: 7.3pt !important;
+    font-size: 8.2pt !important;
   }
 
   .report-table th,
   .report-table td {
-    padding: 3px 2px !important;
+    padding: 5px 3px !important;
   }
 
   .report-point-layout {
-    grid-template-columns: 78px 1fr !important;
-    gap: 6px !important;
-    margin-top: 6px !important;
+    grid-template-columns: 100px 1fr !important;
+    gap: 8px !important;
+    margin-top: 7px !important;
+  }
+
+
+  .report-team-point-block {
+    border-radius: 8px !important;
+    padding: 6px !important;
+    margin-top: 5px !important;
+  }
+
+  .report-team-point-title {
+    font-size: 8.8pt !important;
+    margin-bottom: 4px !important;
   }
 
   .report-pie {
-    width: 72px !important;
-    height: 72px !important;
+    width: 92px !important;
+    height: 92px !important;
   }
 
   .report-pie::after {
-    width: 38px !important;
-    height: 38px !important;
+    width: 48px !important;
+    height: 48px !important;
   }
 
   .report-pie-center {
@@ -3403,8 +3803,8 @@ setStatsMode("point");
   }
 
   .report-rate-card {
-    padding: 5px !important;
-    border-radius: 8px !important;
+    padding: 7px !important;
+    border-radius: 9px !important;
   }
 
   .report-rate-team {
@@ -3431,8 +3831,8 @@ setStatsMode("point");
 
   .report-rotation-layout {
     grid-template-columns: 1fr 1fr !important;
-    gap: 4px !important;
-    margin-top: 5px !important;
+    gap: 6px !important;
+    margin-top: 6px !important;
   }
 
   .report-rotation-card {
@@ -3446,10 +3846,10 @@ setStatsMode("point");
   }
 
   .report-rotation-row {
-    grid-template-columns: 22px 1fr 28px 1fr 28px !important;
-    gap: 3px !important;
-    margin-bottom: 2px !important;
-    font-size: 7pt !important;
+    grid-template-columns: 26px 1fr 32px 1fr 32px !important;
+    gap: 4px !important;
+    margin-bottom: 3px !important;
+    font-size: 7.5pt !important;
   }
 
   .report-bar-bg {
@@ -3557,7 +3957,22 @@ setStatsMode("point");
   };
 
   window.printReport = function () {
+    renderReport();
+    const oldTitle = document.title;
+    try {
+      const match = {
+        matchDate: safeValue("matchDate", getTodayDateString()),
+        opponent: safeValue("opponentName", "AWAY") || "AWAY",
+        id: currentMatchId || Date.now()
+      };
+      if (typeof getSingleMatchFileName === "function") {
+        document.title = getSingleMatchFileName(match, "pdf").replace(/\.pdf$/, "");
+      }
+    } catch (e) {}
+
     window.print();
+
+    setTimeout(() => { document.title = oldTitle; }, 500);
   };
 
   function reportFormatDate(value) {
@@ -3724,29 +4139,47 @@ setStatsMode("point");
     return r;
   }
 
-  function calculateHomePointReasonStats(items) {
+  function getPointReasonLabel(reason, scoredTeam, targetTeam) {
+    const r = String(reason || "").trim();
+    if (!r) return "不明";
+
+    try {
+      if (typeof scoringReasons !== "undefined" && scoringReasons.includes(r)) return r;
+      if (typeof mistakeReasons !== "undefined" && mistakeReasons.includes(r)) {
+        return scoredTeam === targetTeam ? r : `相手${r.replace("失点", "ミス")}`;
+      }
+    } catch (e) {}
+
+    if (r.includes("失点")) {
+      return scoredTeam === targetTeam ? r : `相手${r.replace("失点", "ミス")}`;
+    }
+
+    return r;
+  }
+
+  function calculatePointReasonStatsForTeam(items, team) {
     const result = {};
 
     items.forEach(item => {
       const scoredTeam = getItemScoredTeam(item);
-      if (scoredTeam !== "home") return;
+      if (scoredTeam !== team) return;
 
-      const label = getReasonDisplayName(getItemReason(item), "home");
+      const label = getPointReasonLabel(getItemReason(item), scoredTeam, team);
       result[label] = (result[label] || 0) + 1;
     });
 
     return result;
   }
 
-  function calculateHomeReasonStatsBySet(setNumbers) {
+  function calculateReasonStatsBySetForTeam(setNumbers, team) {
     const reasonSet = new Set();
 
     setNumbers.forEach(setNo => {
-      const stats = calculateHomePointReasonStats(getItemsBySet(setNo));
+      const stats = calculatePointReasonStatsForTeam(getItemsBySet(setNo), team);
       Object.keys(stats).forEach(reason => reasonSet.add(reason));
     });
 
-    const totalStats = calculateHomePointReasonStats(getAllReportItems());
+    const totalStats = calculatePointReasonStatsForTeam(getAllReportItems(), team);
     Object.keys(totalStats).forEach(reason => reasonSet.add(reason));
 
     return {
@@ -3778,18 +4211,15 @@ setStatsMode("point");
     return Math.round((value / total) * 100);
   }
 
-  function renderPointReasonReport(setNumbers) {
-    if (!setNumbers.length) {
-      setNumbers = Array.from(new Set(getAllReportItems().map(getItemSetNumber).filter(Boolean))).sort((a, b) => a - b);
-    }
-
-    const { reasons, totalStats } = calculateHomeReasonStatsBySet(setNumbers);
+  function renderTeamPointReasonBlock(setNumbers, team, teamName) {
+    const { reasons, totalStats } = calculateReasonStatsBySetForTeam(setNumbers, team);
     const total = Object.values(totalStats).reduce((sum, value) => sum + value, 0);
+    const teamClass = team === "home" ? "home-text" : "away-text";
 
     if (!total) {
       return `
-        <div class="report-section">
-          <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+        <div class="report-team-point-block ${team}">
+          <div class="report-team-point-title ${teamClass}">${teamName} 点数情報</div>
           <div style="font-weight:900; color:#666;">まだ得点理由データがありません。</div>
         </div>
       `;
@@ -3799,7 +4229,7 @@ setStatsMode("point");
 
     reasons.forEach(reason => {
       const setCells = setNumbers.map(setNo => {
-        const stats = calculateHomePointReasonStats(getItemsBySet(setNo));
+        const stats = calculatePointReasonStatsForTeam(getItemsBySet(setNo), team);
         return `<td>${stats[reason] || 0}</td>`;
       }).join("");
 
@@ -3826,8 +4256,8 @@ setStatsMode("point");
       }).join("");
 
     return `
-      <div class="report-section">
-        <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+      <div class="report-team-point-block ${team}">
+        <div class="report-team-point-title ${teamClass}">${teamName} 点数情報</div>
 
         <div class="report-table-wrap">
           <table class="report-table">
@@ -3857,6 +4287,20 @@ setStatsMode("point");
             ${legend}
           </div>
         </div>
+      </div>
+    `;
+  }
+
+  function renderPointReasonReport(setNumbers, homeName, awayName) {
+    if (!setNumbers.length) {
+      setNumbers = Array.from(new Set(getAllReportItems().map(getItemSetNumber).filter(Boolean))).sort((a, b) => a - b);
+    }
+
+    return `
+      <div class="report-section">
+        <div class="report-section-title"><span class="report-num">3</span>点数情報</div>
+        ${renderTeamPointReasonBlock(setNumbers, "home", homeName)}
+        ${renderTeamPointReasonBlock(setNumbers, "away", awayName)}
       </div>
     `;
   }
@@ -4071,7 +4515,7 @@ setStatsMode("point");
         </div>
       </div>
 
-      ${renderPointReasonReport(setNumbers)}
+      ${renderPointReasonReport(setNumbers, homeName, awayName)}
 
       ${renderSideoutBreakReport(homeName, awayName)}
     `;

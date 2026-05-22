@@ -17,6 +17,61 @@
 <style>
 * { box-sizing: border-box; }
 
+/* ===== Level 1 common iPhone safety updates ===== */
+html {
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+}
+
+body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+[onclick] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  touch-action: manipulation;
+}
+
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+.app-version {
+  position: fixed;
+  right: calc(50% - 215px + 12px);
+  bottom: 8px;
+  z-index: 20;
+  color: #999;
+  font-size: 11px;
+  font-weight: 800;
+  pointer-events: none;
+}
+
+@media (min-width: 700px) {
+  .app-version {
+    right: calc(50% - 410px + 16px);
+  }
+}
+
+@media (max-width: 430px) {
+  .app-version {
+    right: 12px;
+  }
+}
+/* ===== /Level 1 common iPhone safety updates ===== */
+
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
@@ -1139,6 +1194,7 @@ textarea {
 
     <div id="matchList"></div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
+    <div class="app-version">v1.0.1</div>
   </div>
 
   <div id="scoreScreen" class="screen">

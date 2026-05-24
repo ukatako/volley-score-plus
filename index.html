@@ -1194,7 +1194,7 @@ textarea {
 
     <div id="matchList"></div>
     <button class="new-btn" onclick="newMatch()">＋ 新規入力</button>
-    <div class="app-version">v1.0.1</div>
+    <div class="app-version">v1.0.2</div>
   </div>
 
   <div id="scoreScreen" class="screen">
@@ -1277,7 +1277,7 @@ textarea {
 
           <div>
             <label>開始サーバー</label>
-            <select id="startServer" onchange="markDirty()">
+            <select id="startServer" onchange="syncStartServerFromSelector()">
               <option value="home">HOME</option>
               <option value="away">AWAY</option>
             </select>
@@ -1716,6 +1716,24 @@ function toggleEditMode() {
   renderMatchList();
 }
 
+function getSelectedStartServer() {
+  const el = document.getElementById("startServer");
+  return el && (el.value === "home" || el.value === "away") ? el.value : "home";
+}
+
+function isCurrentSetNotStarted() {
+  const currentSetHistory = history.filter(item => item.setNumber === setNumber);
+  return homeScore === 0 && awayScore === 0 && currentSetHistory.length === 0;
+}
+
+function syncStartServerFromSelector() {
+  markDirty();
+  if (isCurrentSetNotStarted()) {
+    servingTeam = getSelectedStartServer();
+    updateDisplay();
+  }
+}
+
 function startMatch() {
   homeScore = 0;
   awayScore = 0;
@@ -1725,7 +1743,7 @@ function startMatch() {
 
   homeRotation = homeStart === "-" ? "-" : Number(homeStart);
   awayRotation = awayStart === "-" ? "-" : Number(awayStart);
-  servingTeam = document.getElementById("startServer").value;
+  servingTeam = getSelectedStartServer();
 
   history = history.filter(item => item.setNumber !== setNumber);
 
@@ -1856,7 +1874,7 @@ function undo() {
   awayScore = 0;
   homeRotation = homeStart === "-" ? "-" : Number(homeStart);
   awayRotation = awayStart === "-" ? "-" : Number(awayStart);
-  servingTeam = document.getElementById("startServer").value;
+  servingTeam = getSelectedStartServer();
 
   history = [...otherHistory];
 
@@ -3437,6 +3455,9 @@ setStatsMode("point");
   font-size: 14px;
   font-weight: 1000;
   margin-bottom: 8px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .report-team-point-block.away {
@@ -3505,15 +3526,23 @@ setStatsMode("point");
   background: #f6f8ff;
   padding: 12px 8px;
   text-align: center;
+  min-width: 0;
 }
 
 .report-rate-team {
-  font-size: 13px;
+  font-size: clamp(11px, 2.6vw, 13px);
   font-weight: 1000;
   margin-bottom: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
+  min-height: 2.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .report-rate-row {
@@ -3558,6 +3587,9 @@ setStatsMode("point");
   font-weight: 1000;
   color: #0b3a9e;
   margin-bottom: 8px;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 .report-rotation-row {
